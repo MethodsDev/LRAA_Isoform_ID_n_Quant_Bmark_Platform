@@ -1,0 +1,287 @@
+# REF_Guided benchmarking tool registry
+#
+# Single source of truth for parsing rules and display config for the
+# reference-annotation-guided isoform reconstruction regime. Tools are
+# given a reference annotation as a starting point and discover novel
+# isoforms / refine quantification on top of it.
+#
+# Schema is identical to QUANT_ONLY_outputs/tool_registry.yaml -- see
+# that file for the full field reference. Adding a new tool or version
+# means adding an entry here.
+#
+# Differences from QUANT_ONLY:
+#   - Most tools emit GTFs in ref-guided mode (transcripts they kept
+#     plus any newly discovered ones), so gtf_source: own throughout.
+#   - Bambu has a "Ref-Guided." infix in filenames; StringTie uses
+#     "ref-guided." infix; LRAA filenames are unchanged from quant-only.
+#   - Isosceles uses a "refguided_novel_ID" infix.
+
+tools:
+
+  ##########
+  ## LRAA ##
+  ##########
+
+  # Two filename shapes from the LRAA WDL depending on execution path:
+  #   <sample>.LRAA.gtf            (scatter mode -- merge_GTFs strips suffix)
+  #   <sample>.LRAA.ref-guided.gtf (direct mode -- LRAA_runner keeps suffix)
+  # Both represent the same ref-guided output for that sample.
+
+  - name: LRAA-v0.17.5
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.17\.5\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.17\.5(\..*)?\.gtf$'
+    gtf_converter: strip_blanks
+    gtf_source: own
+    color: teal
+    display: true
+    venn: true
+  - name: LRAA-v0.17.2
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.17\.2\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.17\.2(\..*)?\.gtf$'
+    gtf_converter: strip_blanks
+    gtf_source: own
+    color: teal
+    display: true
+    venn: false
+
+  - name: LRAA-v0.15.0
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.15\.0\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.15\.0(\..*)?\.gtf$'
+    gtf_converter: strip_blanks
+    gtf_source: own
+    color: teal
+    display: true
+    venn: false
+
+  ##############
+  ## IsoQuant ##
+  ##############
+
+  - name: IsoQuant-v3.13.0
+    family: IsoQuant
+    quant_pattern: 'isoquant-v3\.13\.0\.IsoQuant\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'isoquant-v3\.13\.0\.IsoQuant\.gtf$'
+    gtf_source: own
+    color: blue
+    display: true
+    venn: true
+
+  - name: IsoQuant-v3.6.3
+    family: IsoQuant
+    quant_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.gtf$'
+    gtf_source: own
+    color: lightblue
+    display: true
+    venn: false
+
+  ###########
+  ## FLAIR ##
+  ###########
+
+  - name: FLAIR-v3.0.0
+    family: FLAIR
+    quant_pattern: 'flair-v3\.0\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    # v3.0.0's GTF has an extra .flair. infix the older form lacks.
+    gtf_pattern: 'flair-v3\.0\.0\.flair\.gtf$'
+    gtf_source: own
+    color: hotpink
+    display: true
+    venn: true
+
+  - name: FLAIR-v2.0.0
+    family: FLAIR
+    quant_pattern: 'flair-v2\.0\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'flair-v2\.0\.0\.gtf$'
+    gtf_source: own
+    color: pink
+    display: true
+    venn: false
+
+  ###############
+  ## StringTie ##
+  ###############
+
+  - name: StringTie-v3.0.3
+    family: StringTie
+    quant_pattern: 'ref-guided\.stringtie-v3\.0\.3\.stringtie\.quant\.tsv$'
+    quant_id_col: 1
+    quant_tpm_col: 4
+    # v3.0.3 emits a header row; v2.2.3 does not.
+    quant_no_header: false
+    gtf_pattern: 'ref-guided\.stringtie-v3\.0\.3\.stringtie\.gtf$'
+    gtf_source: own
+    color: aquamarine
+    display: true
+    venn: true
+
+  - name: StringTie-v2.2.3
+    family: StringTie
+    quant_pattern: 'ref-guided\.stringtie-v2\.2\.3\.stringtie\.quant\.tsv$'
+    quant_id_col: 1
+    quant_tpm_col: 4
+    quant_no_header: true
+    gtf_pattern: 'ref-guided\.stringtie-v2\.2\.3\.stringtie\.gtf$'
+    gtf_source: own
+    color: lightseagreen
+    display: true
+    venn: false
+
+  ############
+  ## FLAMES ##
+  ############
+
+  - name: FLAMES-v0.1
+    family: FLAMES
+    quant_pattern: 'flames-v0\.1\.FLAMES\.counts\.tsv$'
+    quant_id_col: 1
+    quant_tpm_col: 2
+    gtf_pattern: 'flames-v0\.1\.FLAMES\.gff3$'
+    gtf_converter: flames_gff3
+    gtf_source: own
+    color: gainsboro
+    display: true
+    venn: true
+
+  ############
+  ## IsoSeq ##
+  ############
+
+  - name: IsoSeq-v4.0.0
+    family: IsoSeq
+    quant_pattern: 'isoseq-v4\.0\.0\.IsoSeq.*\.abundance\.txt$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    quant_skip_rows: 3
+    quant_preference:
+      - 'IsoSeq\.ref-filtered\.ID\.abundance\.txt$'
+      - 'IsoSeq\.ref-free\.ID\.abundance\.txt$'
+    gtf_pattern: 'isoseq-v4\.0\.0\.IsoSeq\.ref-(filtered|free)\.ID\.gff$'
+    gtf_preference:
+      - 'IsoSeq\.ref-filtered\.ID\.gff$'
+      - 'IsoSeq\.ref-free\.ID\.gff$'
+    gtf_source: own
+    color: orchid
+    display: true
+    venn: true
+
+  #################
+  ## Mandalorion ##
+  #################
+
+  - name: Mandalorion-v4.5.0
+    family: Mandalorion
+    quant_pattern: 'mandalorion-v4\.5\.0\.Mandalorian\.Isoforms\.filtered\.clean\.quant$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    gtf_pattern: 'mandalorion-v4\.5\.0\.Mandalorian\.Isoforms\.filtered\.clean\.gtf$'
+    gtf_source: own
+    color: powderblue
+    display: true
+    venn: true
+
+  ##############
+  ## ESPRESSO ##
+  ##############
+
+  - name: ESPRESSO-v1.6.0
+    family: ESPRESSO
+    # v1.6.0 uses a `.espresso.v1.6.0.` (dot) infix; v1.5.0 used
+    # `.espresso-v1.5.0.` (dash). Same column layout otherwise.
+    quant_pattern: 'espresso\.v1\.6\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 3
+    gtf_pattern: 'espresso\.v1\.6\.0\.gtf$'
+    gtf_source: own
+    color: brown
+    display: true
+    venn: true
+
+  - name: ESPRESSO-v1.5.0
+    family: ESPRESSO
+    quant_pattern: 'espresso-v1\.5\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 3
+    gtf_pattern: 'espresso-v1\.5\.0\.gtf$'
+    gtf_source: own
+    color: saddlebrown
+    display: true
+    venn: false
+
+  ###############
+  ## Isosceles ##
+  ###############
+
+  - name: Isosceles
+    family: Isosceles
+    # Isosceles uses a "refguided_novel_ID" infix for ref-guided output.
+    # Single un-versioned entry -- only one Isosceles version is in use.
+    quant_pattern: 'isosceles\.refguided_novel_ID\.counts$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'isosceles\.refguided_novel_ID\.gtf$'
+    gtf_source: own
+    color: red
+    display: true
+    venn: true
+
+  ###########
+  ## Bambu ##
+  ###########
+
+  # Bambu emits a "Ref-Guided." infix to distinguish from the
+  # DENOVO_ID "Ref-Free." form.
+
+  - name: Bambu-v3.12.1
+    family: Bambu
+    quant_pattern: 'Ref-Guided\.bambu-v3\.12\.1\.bambu\.counts\.txt$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    gtf_pattern: 'Ref-Guided\.bambu-v3\.12\.1\.bambu\.gtf$'
+    gtf_source: own
+    color: forestgreen
+    display: true
+    venn: true
+
+  - name: Bambu-v3.4.0
+    family: Bambu
+    quant_pattern: 'Ref-Guided\.bambu-v3\.4\.0\.bambu\.counts\.txt$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    gtf_pattern: 'Ref-Guided\.bambu-v3\.4\.0\.bambu\.gtf$'
+    gtf_source: own
+    color: mediumseagreen
+    display: true
+    venn: false
+
+  ###########
+  ## TALON ##
+  ###########
+
+  - name: TALON-v6.0
+    family: TALON
+    quant_pattern: '_talon-v6\.0_abundance_filtered\.tsv$'
+    quant_id_col: 3
+    quant_tpm_col: 11
+    gtf_pattern: '_talon-v6\.0\.gtf$'
+    gtf_source: own
+    color: orange
+    display: true
+    venn: true

@@ -1,0 +1,40 @@
+# Python/runtime noise
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# External input payloads
+**/raw_prog_results/*
+!**/raw_prog_results/.gitkeep
+**/processed_prog_results/*
+!**/processed_prog_results/.gitkeep
+**/reference_data/*
+!**/reference_data/.gitkeep
+
+# Generated benchmark outputs
+*.tsv
+*.tsv.gz
+*.tab
+*.quant
+*.counts
+*.gtf
+*.gff
+*.gff3
+*.fa
+*.fasta
+*.fq
+*.fastq
+*.bam
+*.bai
+*.pdf
+*.png
+*.html
+*.log
+*.files.list
+bmark.ok
+script.log
+
+# Executed notebooks are generated in sample directories.
+*.ipynb
+!benchmarking/template_notebooks/*.ipynb
+

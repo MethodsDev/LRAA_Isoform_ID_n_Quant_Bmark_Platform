@@ -1,0 +1,298 @@
+---
+title: "eval_cell_line_RefGuided_ID.Rmd"
+output: github_document
+date: "2025-02-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+
+df = read.csv("refguided_accuracy_summary.tsv", header=T, sep="\t")
+
+df$data_name = str_replace(df$data_name, "CL_", "")
+df$data_name = str_replace(df$data_name, "_human", "")
+
+df = df %>%  separate_wider_delim(data_name, "_", names=c("cell_line", "replicate")) %>%
+  rename(Tool = Program) %>%
+  select(cell_line, replicate, Tool, Metric, Value) %>%
+  filter(Metric != 'knownTPR')
+
+df %>% head()
+
+```
+
+
+```{r}
+
+
+
+df = df %>% spread(key=Metric, value=`Value`) 
+
+df = df %>% dplyr::rename(Recall = `novelTPR`) %>% mutate(Precision = 1-novelFDR) %>% select(-novelFDR)
+
+
+df %>% head()
+
+```
+
+
+
+```{r}
+
+df = df %>% dplyr::select(Tool, F1, Recall, Precision, cell_line, replicate) %>%
+  gather(key="Metric", value='Val', F1, Recall, Precision)
+
+df %>% head()
+
+
+```
+
+```{r}
+
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
+  summarize(mean_F1 = mean(Val)) %>% arrange(desc(mean_F1)) %>% pull(Tool)
+
+
+df$Tool = factor(df$Tool, levels=prog_ranking)
+
+```
+
+
+
+```{r}
+
+df %>% ggplot(aes(x=Tool, y=Val, fill=replicate)) + geom_bar(stat='identity', position='dodge') +
+  facet_grid(vars(Metric), vars(cell_line)) +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Cell lines, ref-guided")
+
+```
+
+```{r}
+
+get_latest_tools = function(data_df) {
+
+  tool_versions = data_df %>%
+    distinct(Tool) %>%
+    mutate(Tool = as.character(Tool),
+           Tool_Base = str_remove(Tool, "-v[0-9].*$"),
+           Version = str_match(Tool, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned_tools = tool_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool_Base) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned_tools = tool_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned_tools, unversioned_tools) %>%
+    pull(Tool)
+}
+
+latest_tools = get_latest_tools(df)
+
+latest_tools
+
+```
+
+
+
+
+
+```{r}
+
+mean_vals_for_plot = df %>%
+  group_by(Tool, Metric, cell_line) %>%
+  summarize(mean_val = mean(Val), stderr = sd(Val)/sqrt(n())) 
+
+
+mean_vals_for_plot$Metric = factor(mean_vals_for_plot$Metric, levels=c("F1", "Recall", "Precision") ) 
+
+
+mean_vals_for_plot %>%  ggplot(aes(x=Tool, y=mean_val)) + geom_col() +
+  geom_errorbar(aes(x=Tool, ymin=mean_val-stderr, ymax=pmin(1, mean_val+stderr))) +
+  facet_grid(vars(Metric),vars(cell_line) ) +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Cell lines - ref guided")
+
+```
+
+```{r}
+
+# Reorder metrics to match other plots
+df$Metric = factor(df$Metric, levels = c("Precision", "Recall", "F1"))
+
+SGNEx_refGuided_plot = df %>% 
+  ggplot(aes(x=Tool, y=replicate, fill=Val)) + 
+  geom_tile(color = "white", size = 0.5) +
+  geom_text(aes(label = sprintf("%.3f", Val)), 
+            size = 3, 
+            color = "white") +
+  scale_fill_gradient(limits = c(0, 1)) +
+  facet_grid(vars(Metric), vars(cell_line)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("SG-NEx Cell lines, ref-guided") +
+  labs(x = "Tool", y = "Replicate")
+
+
+ggsave(SGNEx_refGuided_plot, file="SGNEx_refGuided_plot.pdf", width=9, height=5)
+
+
+SGNEx_refGuided_plot
+
+```
+
+
+# Individual tile plots for each cell line
+
+```{r}
+
+# Function to create ranked tile plot for a specific cell line
+get_ranked_tile_plot = function(cell_line_val, data_df = df) {
+  
+  ranked_df = data_df %>% filter(cell_line == cell_line_val)
+  
+  # Rank programs by F1 score for this cell line
+  ranked_progs = ranked_df %>% 
+    filter(Metric == "F1") %>% 
+    group_by(Tool) %>%
+    summarize(mean_F1 = mean(Val)) %>%
+    arrange(desc(mean_F1)) %>% 
+    pull(Tool)
+  
+  ranked_df$Tool = factor(ranked_df$Tool, levels=ranked_progs)
+  
+  # Create tile plot
+  tile_plot = ranked_df %>%
+    mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
+    ggplot(aes(x=Tool, y=Metric, fill=Val)) + 
+    geom_tile(color = "white", size = 0.5) +
+    geom_text(aes(label = sprintf("%.2f", Val)), color = "white", size = 3) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    scale_fill_gradient(limits = c(0, 1)) +
+    ggtitle(cell_line_val) 
+  #+
+  #  facet_wrap(~replicate, ncol=3)
+  
+  return(tile_plot)
+}
+
+```
+
+```{r}
+df = df %>% select(-cell_line) %>% rename(cell_line = replicate)
+
+```
+
+
+
+```{r}
+
+# Get unique cell lines
+cell_lines = unique(df$cell_line)
+
+# Create plots for each cell line
+for (cl in cell_lines) {
+  assign(paste0(cl, "_tile_plot"), get_ranked_tile_plot(cl))
+}
+
+```
+
+```{r}
+
+A549_tile_plot
+
+```
+
+```{r}
+
+MCF7_tile_plot
+
+```
+
+
+```{r}
+library(cowplot)
+
+stacked_cell_line_plots = plot_grid(
+  A549_tile_plot,
+  MCF7_tile_plot,
+  ncol=1
+)
+
+stacked_cell_line_plots
+
+```
+
+```{r}
+
+ggsave(stacked_cell_line_plots, file="SG-NEx_cell_lines_stacked.pdf", width=9, height=5)
+
+```
+
+```{r}
+
+latest_df = df %>%
+  filter(as.character(Tool) %in% latest_tools)
+
+latest_cell_lines = unique(latest_df$cell_line)
+
+for (cl in latest_cell_lines) {
+  assign(paste0(cl, "_latest_tile_plot"),
+         get_ranked_tile_plot(cl, latest_df))
+}
+
+latest_stacked_cell_line_plots = plot_grid(
+  A549_latest_tile_plot,
+  MCF7_latest_tile_plot,
+  ncol=1
+)
+
+latest_stacked_cell_line_plots
+
+```
+
+```{r}
+
+ggsave(latest_stacked_cell_line_plots,
+       file="SG-NEx_cell_lines_stacked.latest_tools.pdf",
+       width=7,
+       height=5)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

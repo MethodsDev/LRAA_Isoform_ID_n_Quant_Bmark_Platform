@@ -1,0 +1,70 @@
+---
+title: "compare_quants.Rmd"
+output: html_document
+date: "2026-05-08"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+
+flair_v3_data = read.csv("FLAIR-v3.0.0.ref_quant_compare.tsv", header=T, sep="\t")
+
+flair_v3_data %>% head()
+
+```
+
+```{r}
+
+flair_v3_data %>% ggplot(aes(x=log10(ref_tpm+1), y=log10(`FLAIR.v3.0.0_tpm`+1))) + geom_point() +
+  theme_bw()
+ 
+```
+
+```{r}
+
+LRAA_data = read.csv("LRAA.ref_quant_compare.tsv", header=T, sep="\t")
+
+
+LRAA_data %>% head()
+
+```
+
+```{r}
+
+LRAA_data %>% ggplot(aes(x=ref_tpm, y=`LRAA_tpm`)) + geom_point() +
+  scale_x_log10() + scale_y_log10() +
+  theme_bw()
+ 
+
+```
+
+
+```{r}
+
+oarfish_data = read.csv("Oarfish_align-v0.9.4.ref_quant_compare.tsv", sep="\t", header=T)
+
+oarfish_data %>% head()
+
+```
+
+```{r}
+
+oarfish_data %>% ggplot(aes(x=ref_tpm, y=`Oarfish_align.v0.9.4_tpm`)) + geom_point() +
+  scale_x_log10() + scale_y_log10() +
+  theme_bw()
+
+
+```
+
+
+
+
+
+
+

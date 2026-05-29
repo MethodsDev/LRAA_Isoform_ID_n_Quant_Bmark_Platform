@@ -1,0 +1,682 @@
+---
+title: "QUANT_only_summary"
+output: github_document
+date: "2025-02-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+```
+
+# SIRVs
+
+## Pearson Cor
+
+```{r}
+
+SIRVs_pearson_cor_df = read.csv("SIRVs.pearson_cor.tsv", header=T, sep="\t")  %>% dplyr::select(name, cor_value, data_name)
+
+SIRVs_pearson_cor_df$data_name = str_replace(SIRVs_pearson_cor_df$data_name, "CL_", "")
+SIRVs_pearson_cor_df$data_name = str_replace(SIRVs_pearson_cor_df$data_name, "_sirv", "")
+
+SIRVs_pearson_cor_df = SIRVs_pearson_cor_df %>% separate_wider_delim(data_name, "_", names=c("cell_line", "sirv_set"))
+
+SIRVs_pearson_cor_df %>% head()
+
+```
+
+
+```{r}
+# rank according to mean cor val
+pearson_cor_df_ranking = SIRVs_pearson_cor_df %>% 
+  filter(sirv_set != "E0") %>%
+  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+
+
+SIRVs_pearson_cor_df$name = factor(SIRVs_pearson_cor_df$name, levels=pearson_cor_df_ranking)
+
+```
+
+```{r}
+
+SIRVs_pearson_cor_df %>%
+  filter(sirv_set != "E0") %>%
+  ggplot(aes(x=name, y=cor_value)) + geom_col() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_grid(vars(cell_line), vars(sirv_set)) +
+  ggtitle("Pearson correlation")
+
+
+```
+
+
+## Spearman Cor
+
+```{r}
+
+SIRVs_spearman_cor_df = read.csv("SIRVs.spearman_cor.tsv", header=T, sep="\t")  %>% dplyr::select(name, cor_value, data_name)
+
+
+SIRVs_spearman_cor_df$data_name = str_replace(SIRVs_spearman_cor_df$data_name, "CL_", "")
+SIRVs_spearman_cor_df$data_name = str_replace(SIRVs_spearman_cor_df$data_name, "_sirv", "")
+
+SIRVs_spearman_cor_df = SIRVs_spearman_cor_df %>% separate_wider_delim(data_name, "_", names=c("cell_line", "sirv_set"))
+
+SIRVs_spearman_cor_df %>% head()
+
+
+```
+
+
+```{r}
+# rank according to mean cor val
+spearman_cor_df_ranking = SIRVs_spearman_cor_df %>% 
+  filter(sirv_set != "E0") %>%
+  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+
+
+SIRVs_spearman_cor_df$name = factor(SIRVs_spearman_cor_df$name, levels=pearson_cor_df_ranking)
+
+```
+
+```{r}
+
+SIRVs_spearman_cor_df %>% 
+     filter(sirv_set != "E0") %>%
+  ggplot(aes(x=name, y=cor_value)) + geom_col() +
+   theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_grid(vars(cell_line), vars(sirv_set)) +
+  ggtitle("SIRVs - Spearman correlation")
+
+
+```
+
+
+## Median relative difference
+
+```{r}
+SIRVs_median_rel_diff = read.csv("SIRVs.median_rel_diff.tsv", sep="\t", header=T) %>%
+  dplyr::select(name, rel_diff, data_name)
+
+SIRVs_median_rel_diff$data_name = str_replace(SIRVs_median_rel_diff$data_name, "CL_", "")
+SIRVs_median_rel_diff$data_name = str_replace(SIRVs_median_rel_diff$data_name, "_sirv", "")
+
+SIRVs_median_rel_diff = SIRVs_median_rel_diff %>% separate_wider_delim(data_name, "_", names=c("cell_line", "sirv_set"))
+
+SIRVs_median_rel_diff %>% head()
+```
+
+
+```{r}
+# rank according to median relative difference
+mrel_median_diff_ranking = SIRVs_median_rel_diff %>% group_by(name) %>% summarize(mrel_diff = mean(rel_diff)) %>% arrange(mrel_diff) %>% pull(name)
+
+
+SIRVs_median_rel_diff$name = factor(SIRVs_median_rel_diff$name, levels=mrel_median_diff_ranking)
+
+```
+
+
+```{r}
+
+SIRVs_median_rel_diff %>% ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+    theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   facet_grid(vars(cell_line), vars(sirv_set)) +
+   ggtitle("SIRVs - median relative difference")
+
+```
+
+
+```{r}
+
+SIRVs_median_rel_diff %>% ggplot(aes(x=name, y=rel_diff, fill=cell_line)) + 
+   geom_bar(stat='identity', position='dodge') +
+   theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   ggtitle("SIRVs - median relative difference") +
+  facet_wrap(~sirv_set, nrow=1)
+
+
+```
+
+
+
+```{r}
+
+SIRVs_median_rel_diff %>% group_by(name, sirv_set) %>%
+  summarise(mean_median_rel_diff = mean(rel_diff),
+            stderr = sd(rel_diff)/sqrt(n())) %>% 
+  ungroup()  %>%
+  ggplot() + 
+  geom_col(aes(x=name, y=mean_median_rel_diff)) +
+  geom_errorbar(aes(x = name, ymin = mean_median_rel_diff - stderr, ymax = mean_median_rel_diff + stderr)) +
+  facet_wrap(~sirv_set) +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("SIRVs - mean medial rel diff")
+  
+
+```
+
+
+
+## Mean relative difference
+
+
+```{r}
+SIRVs_mean_rel_diff = read.csv("SIRVs.mean_rel_diff.tsv", sep="\t", header=T) %>%
+  dplyr::select(name, rel_diff, data_name)
+
+SIRVs_mean_rel_diff$data_name = str_replace(SIRVs_mean_rel_diff$data_name, "CL_", "")
+SIRVs_mean_rel_diff$data_name = str_replace(SIRVs_mean_rel_diff$data_name, "_sirv", "")
+
+SIRVs_mean_rel_diff = SIRVs_mean_rel_diff %>% separate_wider_delim(data_name, "_", names=c("cell_line", "sirv_set"))
+
+SIRVs_mean_rel_diff %>% head()
+```
+
+
+```{r}
+# rank according to median relative difference
+mrel_mean_diff_ranking = SIRVs_mean_rel_diff %>% group_by(name) %>% summarize(mrel_diff = mean(rel_diff)) %>% arrange(mrel_diff) %>% pull(name)
+
+
+SIRVs_mean_rel_diff$name = factor(SIRVs_mean_rel_diff$name, levels=mrel_mean_diff_ranking)
+
+```
+
+
+
+
+```{r}
+
+
+SIRVs_mean_rel_diff %>% ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   facet_grid(vars(cell_line), vars(sirv_set)) +
+   ggtitle("SIRVs - mean relative difference")
+
+
+
+
+```
+
+
+
+
+```{r}
+
+SIRVs_mean_rel_diff %>% ggplot(aes(x=name, y=rel_diff, fill=cell_line)) +
+  theme_bw() +
+   geom_bar(stat='identity', position='dodge') +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   ggtitle("SIRVs - mean relative difference")
+
+
+```
+
+```{r}
+
+get_latest_programs = function(data_df) {
+
+  program_versions = data_df %>%
+    distinct(name) %>%
+    mutate(name = as.character(name),
+           Tool = str_remove(name, "-v[0-9].*$"),
+           Version = str_match(name, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned_programs = program_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned_programs = program_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned_programs, unversioned_programs) %>%
+    pull(name)
+}
+
+latest_programs = get_latest_programs(SIRVs_mean_rel_diff)
+
+latest_programs
+
+```
+
+
+```{r}
+
+SIRVs_mean_rel_diff %>% group_by(name, sirv_set) %>%
+  summarise(mean_mean_rel_diff = mean(rel_diff),
+            stderr = sd(rel_diff)/sqrt(n())) %>% 
+  ungroup()  %>%
+  ggplot() + 
+  geom_col(aes(x=name, y=mean_mean_rel_diff)) +
+  geom_errorbar(aes(x = name, ymin = mean_mean_rel_diff - stderr, ymax = mean_mean_rel_diff + stderr)) +
+  facet_wrap(~sirv_set) +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("SIRVs - mean mean rel diffs")
+  
+
+```
+
+# heatmap style representation
+
+```{r}
+
+SIRVs_mean_mean_rel_diff  = SIRVs_mean_rel_diff %>% group_by(name, sirv_set) %>%
+  summarise(mean_mean_rel_diff = mean(rel_diff))
+
+SIRVs_mean_mean_rel_diff %>% head()
+```
+
+
+
+```{r}
+
+get_ranked_df = function(sirv_set_val) {
+  
+  ranked_df =   SIRVs_mean_mean_rel_diff %>% filter(sirv_set == sirv_set_val)
+  
+  ranked_progs = ranked_df %>% arrange(mean_mean_rel_diff) %>% pull(name)
+  
+  ranked_df$name = factor(ranked_df$name, levels=ranked_progs)
+  
+  return(ranked_df)
+ 
+}
+
+```
+
+
+
+```{r}
+
+color_scale_limit_range = c(0,1.05)
+
+```
+
+
+```{r}
+
+E0_mean_expr_df = get_ranked_df("E0")
+
+E0_mean_expr_plot = E0_mean_expr_df %>% ggplot(aes(x=name, y=mean_mean_rel_diff, fill=mean_mean_rel_diff)) + 
+  geom_col() +
+  geom_text(aes(label = round(mean_mean_rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("E0 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+E0_mean_expr_plot
+
+```
+
+
+```{r}
+
+E1_mean_expr_df = get_ranked_df("E1")
+
+E1_mean_expr_plot = E1_mean_expr_df %>% 
+  ggplot(aes(x=name, y=mean_mean_rel_diff, fill=mean_mean_rel_diff)) + 
+  geom_col() +
+  geom_text(aes(label = round(mean_mean_rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("E1 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+E1_mean_expr_plot
+
+```
+
+```{r}
+
+E2_mean_expr_df = get_ranked_df("E2")
+
+E2_mean_expr_plot = E2_mean_expr_df %>% 
+  ggplot(aes(x=name, y=mean_mean_rel_diff, fill=mean_mean_rel_diff)) + 
+  geom_col() +
+  geom_text(aes(label = round(mean_mean_rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("E2 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+E2_mean_expr_plot
+
+```
+
+
+```{r}
+
+library(cowplot)
+
+summary_plot = plot_grid(E0_mean_expr_plot,
+                              E1_mean_expr_plot,
+                              E2_mean_expr_plot,
+                              ncol=1) 
+
+summary_plot
+
+```
+
+
+
+
+
+```{r}
+
+ggsave(summary_plot, file="SIRVs_sim_quant_summary.pdf", width=8, height=10.5)
+
+```
+
+```{r}
+
+SIRVs_latest_mean_mean_rel_diff = SIRVs_mean_rel_diff %>%
+  filter(as.character(name) %in% latest_programs) %>%
+  group_by(name, sirv_set) %>%
+  summarise(mean_mean_rel_diff = mean(rel_diff))
+
+get_ranked_latest_df = function(sirv_set_val) {
+
+  ranked_df = SIRVs_latest_mean_mean_rel_diff %>%
+    filter(sirv_set == sirv_set_val)
+
+  ranked_progs = ranked_df %>%
+    arrange(mean_mean_rel_diff) %>%
+    pull(name)
+
+  ranked_df$name = factor(ranked_df$name, levels=ranked_progs)
+
+  return(ranked_df)
+}
+
+E0_latest_mean_expr_df = get_ranked_latest_df("E0")
+
+E0_latest_mean_expr_plot = E0_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=mean_mean_rel_diff, fill=mean_mean_rel_diff)) +
+  geom_col() +
+  geom_text(aes(label = round(mean_mean_rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("E0 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+E1_latest_mean_expr_df = get_ranked_latest_df("E1")
+
+E1_latest_mean_expr_plot = E1_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=mean_mean_rel_diff, fill=mean_mean_rel_diff)) +
+  geom_col() +
+  geom_text(aes(label = round(mean_mean_rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("E1 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+E2_latest_mean_expr_df = get_ranked_latest_df("E2")
+
+E2_latest_mean_expr_plot = E2_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=mean_mean_rel_diff, fill=mean_mean_rel_diff)) +
+  geom_col() +
+  geom_text(aes(label = round(mean_mean_rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("E2 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+latest_summary_plot = plot_grid(E0_latest_mean_expr_plot,
+                                E1_latest_mean_expr_plot,
+                                E2_latest_mean_expr_plot,
+                                ncol=1)
+
+latest_summary_plot
+
+```
+
+```{r}
+
+ggsave(latest_summary_plot,
+       file="SIRVs_sim_quant_summary.latest_tools.pdf",
+       width=8,
+       height=10.5)
+
+```
+
+## Oarfish-style quantification metrics
+
+```{r oarfish_read_metrics}
+
+SIRVs_oarfish_metrics_file = "SIRVs.oarfish_style_metrics.tsv"
+
+if (file.exists(SIRVs_oarfish_metrics_file)) {
+  SIRVs_oarfish_metrics_df = read.csv(SIRVs_oarfish_metrics_file, sep="\t", header=T)
+  SIRVs_oarfish_metrics_df$data_name = str_replace(SIRVs_oarfish_metrics_df$data_name, "CL_", "")
+  SIRVs_oarfish_metrics_df$data_name = str_replace(SIRVs_oarfish_metrics_df$data_name, "_sirv", "")
+  SIRVs_oarfish_metrics_df = SIRVs_oarfish_metrics_df %>%
+    separate_wider_delim(data_name, "_", names=c("cell_line", "sirv_set"))
+} else {
+  message(SIRVs_oarfish_metrics_file, " not found; run make summarize after regenerating per-sample oarfish_style_metrics.tsv files.")
+  SIRVs_oarfish_metrics_df = tibble()
+}
+
+SIRVs_oarfish_metrics_df %>% head()
+
+```
+
+```{r oarfish_prep_metrics}
+
+higher_is_better_metrics = c(
+  "spearman",
+  "pearson_log1p",
+  "ccc_log1p",
+  "kendall",
+  "pr_auc",
+  "average_precision"
+)
+
+lower_is_better_metrics = c(
+  "rmse",
+  "nrmse_mean_truth",
+  "mard"
+)
+
+oarfish_metric_labels = tribble(
+  ~metric, ~metric_label,
+  "spearman", "Spearman",
+  "pearson_log1p", "Pearson log1p",
+  "ccc_log1p", "CCC log1p",
+  "kendall", "Kendall",
+  "rmse", "RMSE",
+  "nrmse_mean_truth", "NRMSE",
+  "mard", "MARD",
+  "pr_auc", "PR-AUC",
+  "average_precision", "Average precision"
+)
+
+if (nrow(SIRVs_oarfish_metrics_df) > 0) {
+  SIRVs_oarfish_metrics_long = SIRVs_oarfish_metrics_df %>%
+    dplyr::select(name, cell_line, sirv_set, all_of(c(higher_is_better_metrics, lower_is_better_metrics))) %>%
+    pivot_longer(
+      cols = all_of(c(higher_is_better_metrics, lower_is_better_metrics)),
+      names_to = "metric",
+      values_to = "metric_value"
+    ) %>%
+    left_join(oarfish_metric_labels, by="metric") %>%
+    mutate(
+      data_name = paste(cell_line, sirv_set, sep="_"),
+      direction = if_else(metric %in% higher_is_better_metrics, "higher is better", "lower is better"),
+      metric_label = factor(metric_label, levels=oarfish_metric_labels$metric_label)
+    )
+} else {
+  SIRVs_oarfish_metrics_long = tibble()
+}
+
+```
+
+```{r oarfish_rank_metrics}
+
+if (nrow(SIRVs_oarfish_metrics_long) > 0) {
+  SIRVs_oarfish_metric_rankings = SIRVs_oarfish_metrics_long %>%
+    group_by(data_name, metric, metric_label, direction) %>%
+    mutate(
+      metric_rank = if_else(
+        direction == "higher is better",
+        min_rank(desc(metric_value)),
+        min_rank(metric_value)
+      )
+    ) %>%
+    ungroup()
+
+  SIRVs_oarfish_mean_rankings = SIRVs_oarfish_metric_rankings %>%
+    group_by(name, metric, metric_label, direction) %>%
+    summarize(
+      mean_metric_value = mean(metric_value, na.rm=TRUE),
+      mean_rank = mean(metric_rank, na.rm=TRUE),
+      .groups = "drop"
+    )
+} else {
+  SIRVs_oarfish_metric_rankings = tibble()
+  SIRVs_oarfish_mean_rankings = tibble()
+}
+
+```
+
+```{r oarfish_reorder_helpers}
+
+reorder_within = function(x, by, within, fun=mean, sep="___", ...) {
+  new_x = paste(x, within, sep=sep)
+  stats::reorder(new_x, by, FUN=fun)
+}
+
+scale_y_reordered = function(..., sep="___") {
+  scale_y_discrete(labels=function(x) gsub(paste0(sep, ".+$"), "", x), ...)
+}
+
+```
+
+Note: PR-AUC and average precision require both expressed and unexpressed truth
+isoforms in the scored reference set. In the current SIRV truth sets, all scored
+multi-exon SIRV isoforms are truth-expressed (`n_truth_unexpressed = 0`), so
+those two metrics are reported as `NA` and their plot facets are not
+interpretable for SIRVs.
+
+```{r oarfish_mean_rank_plot}
+
+if (nrow(SIRVs_oarfish_mean_rankings) > 0) {
+  oarfish_metric_mean_rank_plot = SIRVs_oarfish_mean_rankings %>%
+    ggplot(aes(x=mean_rank, y=reorder_within(name, -mean_rank, metric_label), fill=mean_rank)) +
+    geom_col() +
+    geom_text(aes(label=round(mean_rank, 1)), hjust=-0.1, size=2.5) +
+    facet_wrap(~metric_label, scales="free_y") +
+    scale_y_reordered() +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_fill_gradient(low="darkgreen", high="lightgreen") +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean rank across SIRV samples") +
+    ylab("") +
+    ggtitle("SIRVs - Oarfish-style metric rankings")
+
+  oarfish_metric_mean_rank_plot
+}
+
+```
+
+```{r oarfish_mean_value_plot}
+
+if (nrow(SIRVs_oarfish_mean_rankings) > 0) {
+  oarfish_metric_value_plot = SIRVs_oarfish_mean_rankings %>%
+    ggplot(aes(x=mean_metric_value, y=reorder_within(name, mean_metric_value, metric_label), fill=mean_metric_value)) +
+    geom_col() +
+    facet_wrap(~metric_label, scales="free") +
+    scale_y_reordered() +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean metric value across SIRV samples") +
+    ylab("") +
+    ggtitle("SIRVs - Oarfish-style mean metric values")
+
+  oarfish_metric_value_plot
+}
+
+```
+
+```{r oarfish_save_plots}
+
+if (exists("oarfish_metric_mean_rank_plot")) {
+  ggsave(oarfish_metric_mean_rank_plot,
+         file="SIRVs_oarfish_style_metric_rankings.pdf",
+         width=11,
+         height=8.5)
+}
+
+if (exists("oarfish_metric_value_plot")) {
+  ggsave(oarfish_metric_value_plot,
+         file="SIRVs_oarfish_style_metric_values.pdf",
+         width=11,
+         height=8.5)
+}
+
+```
+
+```{r oarfish_latest_rank_plot}
+
+if (nrow(SIRVs_oarfish_mean_rankings) > 0) {
+  SIRVs_oarfish_latest_mean_rankings = SIRVs_oarfish_mean_rankings %>%
+    filter(as.character(name) %in% latest_programs)
+
+  oarfish_latest_metric_mean_rank_plot = SIRVs_oarfish_latest_mean_rankings %>%
+    ggplot(aes(x=mean_rank, y=reorder_within(name, -mean_rank, metric_label), fill=mean_rank)) +
+    geom_col() +
+    geom_text(aes(label=round(mean_rank, 1)), hjust=-0.1, size=2.5) +
+    facet_wrap(~metric_label, scales="free_y") +
+    scale_y_reordered() +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_fill_gradient(low="darkgreen", high="lightgreen") +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean rank across SIRV samples") +
+    ylab("") +
+    ggtitle("SIRVs - Oarfish-style metric rankings, latest tools")
+
+  oarfish_latest_metric_mean_rank_plot
+}
+
+```
+
+```{r oarfish_save_latest_plot}
+
+if (exists("oarfish_latest_metric_mean_rank_plot")) {
+  ggsave(oarfish_latest_metric_mean_rank_plot,
+         file="SIRVs_oarfish_style_metric_rankings.latest_tools.pdf",
+         width=11,
+         height=8.5)
+}
+
+```

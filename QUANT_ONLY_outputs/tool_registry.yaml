@@ -1,0 +1,350 @@
+# QUANT_ONLY benchmarking tool registry
+#
+# Single source of truth for parsing rules and display config.
+# Adding a new tool or a new version of an existing tool means
+# adding an entry here -- no code changes anywhere else.
+#
+# Schema:
+#   name             Unique label that appears in plots and in the
+#                    `name` column of every aggregated TSV. Becomes the
+#                    basename of processed_prog_results/<name>.tsv (and
+#                    <name>.gtf if a gtf_pattern is given).
+#   family           Tool family used for grouping versions.
+#   quant_pattern    Regex matched against the basename of files in
+#                    raw_prog_results/. First matching entry wins (so
+#                    list more-specific versioned patterns BEFORE the
+#                    less-specific fallback for the same family).
+#   quant_id_col     0-indexed column holding the transcript_id.
+#   quant_tpm_col    0-indexed column holding the read count or TPM
+#                    (the value is re-normalized to sum to 1M per file).
+#   quant_skip_rows  Lines to skip before the header row (default: 0).
+#   quant_no_header  true if the quant file has no header row
+#                    (default: false).
+#   gtf_pattern      (optional) regex for the program-specific GTF.
+#                    Recognizing the file suppresses deposit-time
+#                    warnings about unmatched files. Whether the
+#                    notebook actually USES this GTF is controlled by
+#                    gtf_source.
+#   gtf_source       "ref" (default) or "own". "ref" means the notebook
+#                    keys the entry off REF_gtf when deriving introns
+#                    -- correct for tools that quantify against the
+#                    reference annotation (LRAA-quant-only, IsoQuant,
+#                    Oarfish, FLAIR, StringTie, ESPRESSO, Bambu).
+#                    "own" means the entry keys off its own GTF --
+#                    correct for tools that emit private transcript
+#                    IDs (FLAMES, IsoSeq, Mandalorion, Isosceles,
+#                    TALON). Requires gtf_pattern.
+#   gtf_converter    (optional) "flames_gff3" runs the FLAMES gff3->gtf
+#                    converter; otherwise the raw GTF is used as-is.
+#   quant_preference (optional) ordered list of regexes used to break ties
+#                    when multiple quant files match the same entry; lower
+#                    list index wins. If omitted, multiple quant matches are
+#                    treated as an error.
+#   gtf_preference   (optional) ordered list of regexes used to break ties
+#                    when multiple GTF files match the same entry; lower
+#                    list index wins. If omitted, multiple GTF matches are
+#                    treated as an error.
+#   color            Plot color (matplotlib named or hex).
+#   display          true to plot/aggregate in the default report
+#                    (default: true). Override via a report_set yaml.
+#   venn             true to count this entry as a participating method
+#                    in Venn-mode (--Venn_mode) truth-set agreement
+#                    (default: true). Override via a report_set yaml.
+
+tools:
+
+  ##########
+  ## LRAA ##
+  ##########
+
+  # Whichever LRAA version produced the .LRAA.*.quant.expr file in
+  # raw_prog_results/ is the one that gets reported. We do not track
+  # the LRAA version separately -- the deposit step is responsible
+  # for ensuring only one LRAA file per sample is in raw_prog_results/.
+
+  - name: LRAA-v0.17.5
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.17\.5\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.17\.5(\..*)?\.gtf$'
+    color: teal
+    display: true
+    venn: true
+  - name: LRAA-v0.17.4
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.17\.4\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.17\.4(\..*)?\.gtf$'
+    color: teal
+    display: true
+    venn: false
+  - name: LRAA-v0.17.2
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.17\.2\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.17\.2(\..*)?\.gtf$'
+    color: teal
+    display: true
+    venn: false
+
+  - name: LRAA-v0.15.0
+    family: LRAA
+    quant_pattern: 'LRAA\.v0\.15\.0\..*quant\.expr$'
+    quant_id_col: 1
+    quant_tpm_col: 3
+    gtf_pattern: 'LRAA\.v0\.15\.0(\..*)?\.gtf$'
+    color: teal
+    display: true
+    venn: false
+
+  ##############
+  ## IsoQuant ##
+  ##############
+
+  - name: IsoQuant-v3.13.0
+    family: IsoQuant
+    quant_pattern: 'isoquant-v3\.13\.0\.IsoQuant\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    color: blue
+    display: true
+    venn: true
+
+  - name: IsoQuant-v3.6.3
+    family: IsoQuant
+    quant_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.gtf$'
+    color: lightblue
+    display: true
+    venn: false
+
+  ###########
+  ## FLAIR ##
+  ###########
+
+  - name: FLAIR-v3.0.0
+    family: FLAIR
+    quant_pattern: 'flair-v3\.0\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    color: pink
+    display: true
+    venn: true
+
+  - name: FLAIR-v2.0.0
+    family: FLAIR
+    quant_pattern: 'flair-v2\.0\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'flair-v2\.0\.0\.gtf$'
+    color: hotpink
+    display: true
+    venn: false
+
+  ###############
+  ## StringTie ##
+  ###############
+
+  - name: StringTie-v3.0.3
+    family: StringTie
+    quant_pattern: 'stringtie-v3\.0\.3\.stringtie\.quant\.tsv$'
+    quant_id_col: 1
+    quant_tpm_col: 4
+    # v3.0.3 emits a header row; the older v2.2.3 does not.
+    quant_no_header: false
+    gtf_pattern: 'stringtie-v3\.0\.3\.stringtie\.gtf$'
+    color: aquamarine
+    display: true
+    venn: true
+
+  - name: StringTie-v2.2.3
+    family: StringTie
+    quant_pattern: 'stringtie-v2\.2\.3\.stringtie\.quant\.tsv$'
+    quant_id_col: 1
+    quant_tpm_col: 4
+    quant_no_header: true
+    gtf_pattern: 'stringtie-v2\.2\.3\.stringtie\.gtf$'
+    color: lightseagreen
+    display: true
+    venn: false
+
+  ###########################
+  ## Oarfish - byAlignment ##
+  ###########################
+
+  - name: Oarfish_align-v0.9.4
+    family: Oarfish_align
+    quant_pattern: 'oarfish-v0\.9\.4\.Oarfish\.byAlignment\.quant$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    color: khaki
+    display: true
+    venn: true
+
+  - name: Oarfish_align-v0.6.5
+    family: Oarfish_align
+    quant_pattern: 'oarfish-v0\.6\.5\.Oarfish\.byAlignment\.quant$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    color: gold
+    display: true
+    venn: false
+
+  #######################
+  ## Oarfish - byReads ##
+  #######################
+
+  - name: Oarfish_reads-v0.9.4
+    family: Oarfish_reads
+    quant_pattern: 'oarfish-v0\.9\.4\.Oarfish\.byReads\.quant$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    color: peachpuff
+    display: true
+    venn: true
+
+  - name: Oarfish_reads-v0.6.5
+    family: Oarfish_reads
+    quant_pattern: 'oarfish-v0\.6\.5\.Oarfish\.byReads\.quant$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    color: sandybrown
+    display: true
+    venn: false
+
+  ############
+  ## FLAMES ##
+  ############
+
+  - name: FLAMES-v0.1
+    family: FLAMES
+    quant_pattern: 'flames-v0\.1\.FLAMES\.counts\.tsv$'
+    quant_id_col: 1
+    quant_tpm_col: 2
+    gtf_pattern: 'flames-v0\.1\.FLAMES\.gff3$'
+    gtf_converter: flames_gff3
+    gtf_source: own
+    color: gainsboro
+    display: true
+    venn: true
+
+  ############
+  ## IsoSeq ##
+  ############
+
+  - name: IsoSeq-v4.0.0
+    family: IsoSeq
+    quant_pattern: 'isoseq-v4\.0\.0\.IsoSeq.*\.abundance\.txt$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    quant_skip_rows: 3
+    quant_preference:
+      - 'IsoSeq\.ref-filtered\.ID\.abundance\.txt$'
+      - 'IsoSeq\.ref-free\.ID\.abundance\.txt$'
+    gtf_pattern: 'isoseq-v4\.0\.0\.IsoSeq\.ref-(filtered|free)\.ID\.gff$'
+    gtf_preference:
+      - 'IsoSeq\.ref-filtered\.ID\.gff$'
+      - 'IsoSeq\.ref-free\.ID\.gff$'
+    gtf_source: own
+    color: orchid
+    display: true
+    venn: true
+
+  #################
+  ## Mandalorion ##
+  #################
+
+  - name: Mandalorion-v4.5.0
+    family: Mandalorion
+    quant_pattern: 'mandalorion-v4\.5\.0\.Mandalorian\.Isoforms\.filtered\.clean\.quant$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    gtf_pattern: 'mandalorion-v4\.5\.0\.Mandalorian\.Isoforms\.filtered\.clean\.gtf$'
+    gtf_source: own
+    color: powderblue
+    display: true
+    venn: true
+
+  ##############
+  ## ESPRESSO ##
+  ##############
+
+  - name: ESPRESSO-v1.6.0
+    family: ESPRESSO
+    # v1.6.0 uses a `.espresso.v1.6.0.` (dot) infix; v1.5.0 used
+    # `.espresso-v1.5.0.` (dash). Same column layout otherwise.
+    quant_pattern: 'espresso\.v1\.6\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 3
+    gtf_pattern: 'espresso\.v1\.6\.0\.gtf$'
+    color: brown
+    display: true
+    venn: true
+
+  - name: ESPRESSO-v1.5.0
+    family: ESPRESSO
+    quant_pattern: 'espresso-v1\.5\.0\.counts\.tsv$'
+    quant_id_col: 0
+    quant_tpm_col: 3
+    gtf_pattern: 'espresso-v1\.5\.0\.gtf$'
+    color: saddlebrown
+    display: true
+    venn: false
+
+  ###############
+  ## Isosceles ##
+  ###############
+
+  - name: Isosceles-v0.2.0
+    family: Isosceles
+    quant_pattern: 'isosceles-v0\.2\.0\.counts$'
+    quant_id_col: 0
+    quant_tpm_col: 1
+    gtf_pattern: 'isosceles-v0\.2\.0\.gtf$'
+    gtf_source: own
+    color: red
+    display: true
+    venn: true
+
+  ###########
+  ## Bambu ##
+  ###########
+
+  - name: Bambu-v3.12.1
+    family: Bambu
+    quant_pattern: 'bambu-v3\.12\.1\.bambu\.counts\.txt$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    color: forestgreen
+    display: true
+    venn: true
+
+  - name: Bambu-v3.4.0
+    family: Bambu
+    quant_pattern: 'bambu-v3\.4\.0\.bambu\.counts\.txt$'
+    quant_id_col: 0
+    quant_tpm_col: 2
+    gtf_pattern: 'bambu-v3\.4\.0\.bambu\.gtf$'
+    color: mediumseagreen
+    display: true
+    venn: false
+
+  ###########
+  ## TALON ##
+  ###########
+
+  - name: TALON-v6.0
+    family: TALON
+    quant_pattern: '_talon-v6\.0_abundance_filtered\.tsv$'
+    quant_id_col: 3
+    quant_tpm_col: 11
+    gtf_pattern: '_talon-v6\.0\.gtf$'
+    gtf_source: own
+    color: orange
+    display: true
+    venn: true

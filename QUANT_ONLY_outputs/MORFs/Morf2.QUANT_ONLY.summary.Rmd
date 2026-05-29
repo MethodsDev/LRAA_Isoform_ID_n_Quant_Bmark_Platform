@@ -1,0 +1,609 @@
+---
+title: "MORFs QUANT_only_summary"
+output: github_document
+date: "2025-02-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+```
+
+# MORFs
+
+## Pearson Cor
+
+```{r}
+
+morf2_pearson_cor_df = read.csv("morf2.pearson_cor.tsv", header=T, sep="\t")  %>% dplyr::select(name, cor_value, data_name)
+
+morf2_pearson_cor_df$data_name = str_replace(morf2_pearson_cor_df$data_name, "morf2_", "")
+
+morf2_pearson_cor_df %>% head()
+
+```
+
+
+```{r}
+# rank according to mean cor val
+pearson_cor_df_ranking = morf2_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+
+
+morf2_pearson_cor_df$name = factor(morf2_pearson_cor_df$name, levels=pearson_cor_df_ranking)
+
+```
+
+```{r}
+
+morf2_pearson_cor_df %>% ggplot(aes(x=name, y=cor_value)) + geom_col() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~data_name, nrow=1) +
+  ggtitle("MORFs - Pearson cor")
+
+
+```
+
+
+## Spearman Cor
+
+```{r}
+
+morf2_spearman_cor_df = read.csv("morf2.spearman_cor.tsv", header=T, sep="\t")  %>% dplyr::select(name, cor_value, data_name)
+
+morf2_spearman_cor_df$data_name = str_replace(morf2_spearman_cor_df$data_name, "morf2_", "")
+
+morf2_spearman_cor_df %>% head()
+
+
+```
+
+
+```{r}
+# rank according to mean cor val
+spearman_cor_df_ranking = morf2_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+
+
+morf2_spearman_cor_df$name = factor(morf2_spearman_cor_df$name, levels=pearson_cor_df_ranking)
+
+```
+
+```{r}
+
+morf2_spearman_cor_df %>% ggplot(aes(x=name, y=cor_value)) + geom_col() +
+   theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   facet_wrap(~data_name, nrow=1) +
+  ggtitle("MORFs - Spearman cor")
+
+
+```
+
+
+## Median relative difference
+
+```{r}
+morf2_median_rel_diff = read.csv("morf2.median_rel_diff.tsv", sep="\t", header=T) %>%
+  dplyr::select(name, rel_diff, data_name)
+
+morf2_median_rel_diff$data_name  = str_replace(morf2_median_rel_diff$data_name, "morf2_", "")
+
+morf2_median_rel_diff %>% head()
+```
+
+
+```{r}
+# rank according to median relative difference
+mrel_median_diff_ranking = morf2_median_rel_diff %>% group_by(name) %>% summarize(mrel_diff = mean(rel_diff)) %>% arrange(mrel_diff) %>% pull(name)
+
+
+morf2_median_rel_diff$name = factor(morf2_median_rel_diff$name, levels=mrel_median_diff_ranking)
+
+```
+
+
+```{r}
+
+morf2_median_rel_diff %>% ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+    theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~data_name, nrow=1) +
+  ggtitle("median relative difference - morf2") 
+  
+
+
+```
+
+
+
+```{r}
+
+pbio_morf2_median_rel_diff = morf2_median_rel_diff %>% filter(grepl("pacbio_", data_name))
+
+pbio_morf2_median_rel_rankings = pbio_morf2_median_rel_diff %>% arrange(rel_diff) %>% pull(name)
+
+
+pbio_morf2_median_rel_diff$name = factor(pbio_morf2_median_rel_diff$name, levels=pbio_morf2_median_rel_rankings)
+
+
+```
+
+```{r}
+
+pbio_morf2_median_rel_diff_plot = pbio_morf2_median_rel_diff %>% 
+  ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+    theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("pacbio morf2 median rel diff")
+
+pbio_morf2_median_rel_diff_plot 
+
+```
+
+
+
+```{r}
+
+ont_morf2_median_rel_diff = morf2_median_rel_diff %>% filter(grepl("ont_", data_name))
+
+ont_morf2_median_rel_rankings = ont_morf2_median_rel_diff %>% arrange(rel_diff) %>% pull(name)
+
+
+ont_morf2_median_rel_diff$name = factor(ont_morf2_median_rel_diff$name, levels=ont_morf2_median_rel_rankings)
+
+
+```
+
+```{r}
+
+ont_morf2_median_rel_diff_plot = ont_morf2_median_rel_diff %>% 
+  ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+    theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("ONT morf2 median rel diff")
+
+ont_morf2_median_rel_diff_plot 
+
+```
+
+
+
+
+
+
+
+## Mean relative difference
+
+
+```{r}
+morf2_mean_rel_diff = read.csv("morf2.mean_rel_diff.tsv", sep="\t", header=T) %>%
+  dplyr::select(name, rel_diff, data_name)
+
+morf2_mean_rel_diff$data_name  = str_replace(morf2_mean_rel_diff$data_name, "morf2_", "")
+
+morf2_mean_rel_diff %>% head()
+```
+
+
+```{r}
+# rank according to median relative difference
+mrel_mean_diff_ranking = morf2_mean_rel_diff %>% group_by(name) %>% summarize(mrel_diff = mean(rel_diff)) %>% arrange(mrel_diff) %>% pull(name)
+
+
+morf2_mean_rel_diff$name = factor(morf2_mean_rel_diff$name, levels=mrel_mean_diff_ranking)
+
+```
+
+
+```{r}
+
+morf2_mean_rel_diff %>% ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~data_name, nrow=1) +
+  ggtitle("mean relative diffference - morf2")
+
+
+```
+
+```{r}
+
+get_latest_programs = function(data_df) {
+
+  program_versions = data_df %>%
+    distinct(name) %>%
+    mutate(name = as.character(name),
+           Tool = str_remove(name, "-v[0-9].*$"),
+           Version = str_match(name, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned_programs = program_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned_programs = program_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned_programs, unversioned_programs) %>%
+    pull(name)
+}
+
+latest_programs = get_latest_programs(morf2_mean_rel_diff)
+
+latest_programs
+
+```
+
+```{r}
+
+pbio_only_plot = morf2_mean_rel_diff %>% 
+  filter(grepl("pacbio", data_name)) %>%
+  
+  
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + geom_col() +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   scale_fill_gradient(low='lightgreen', high='darkgreen') +
+  ggtitle("mean relative diffference - morf2")
+
+pbio_only_plot
+
+```
+
+
+
+```{r}
+
+ggsave(pbio_only_plot, file="pbio_only_plot.quant_summary.pdf", width=5, height=5)
+
+
+
+```
+
+
+
+
+```{r}
+
+pbio_morf2_mean_rel_diff = morf2_mean_rel_diff %>% filter(grepl("pacbio_", data_name))
+
+pbio_morf2_mean_rel_rankings = pbio_morf2_mean_rel_diff %>% arrange(rel_diff) %>% pull(name)
+
+
+pbio_morf2_mean_rel_diff$name = factor(pbio_morf2_mean_rel_diff$name, levels=pbio_morf2_mean_rel_rankings)
+
+
+```
+
+```{r}
+
+pbio_morf2_mean_rel_diff_plot = pbio_morf2_mean_rel_diff %>% 
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + 
+  geom_col() +
+  geom_text(aes(label = round(rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("pacbio morf2 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+pbio_morf2_mean_rel_diff_plot 
+
+```
+
+```{r}
+
+ont_morf2_mean_rel_diff = morf2_mean_rel_diff %>% filter(grepl("ont_", data_name))
+
+ont_morf2_mean_rel_rankings = ont_morf2_mean_rel_diff %>% arrange(rel_diff) %>% pull(name)
+
+
+ont_morf2_mean_rel_diff$name = factor(ont_morf2_mean_rel_diff$name, levels=ont_morf2_mean_rel_rankings)
+
+
+```
+
+```{r}
+
+ont_morf2_mean_rel_diff_plot = ont_morf2_mean_rel_diff %>%  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + 
+  geom_col() +
+  geom_text(aes(label = round(rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("ONT morf2 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+ont_morf2_mean_rel_diff_plot 
+
+```
+
+```{r}
+
+combined_morf_quant_plot = plot_grid(pbio_morf2_mean_rel_diff_plot,
+                                     ont_morf2_mean_rel_diff_plot,
+                                     ncol=1)
+
+ggsave(combined_morf_quant_plot, file="combined_morf_quant_plot.pdf", height=6, width=8)
+
+
+combined_morf_quant_plot
+
+
+```
+
+```{r}
+
+latest_pbio_morf2_mean_rel_diff = morf2_mean_rel_diff %>%
+  filter(grepl("pacbio_", data_name),
+         as.character(name) %in% latest_programs)
+
+latest_pbio_morf2_mean_rel_rankings = latest_pbio_morf2_mean_rel_diff %>%
+  arrange(rel_diff) %>%
+  pull(name)
+
+latest_pbio_morf2_mean_rel_diff$name = factor(latest_pbio_morf2_mean_rel_diff$name,
+                                              levels=latest_pbio_morf2_mean_rel_rankings)
+
+latest_pbio_morf2_mean_rel_diff_plot = latest_pbio_morf2_mean_rel_diff %>%
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) +
+  geom_col() +
+  geom_text(aes(label = round(rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("pacbio morf2 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+latest_ont_morf2_mean_rel_diff = morf2_mean_rel_diff %>%
+  filter(grepl("ont_", data_name),
+         as.character(name) %in% latest_programs)
+
+latest_ont_morf2_mean_rel_rankings = latest_ont_morf2_mean_rel_diff %>%
+  arrange(rel_diff) %>%
+  pull(name)
+
+latest_ont_morf2_mean_rel_diff$name = factor(latest_ont_morf2_mean_rel_diff$name,
+                                             levels=latest_ont_morf2_mean_rel_rankings)
+
+latest_ont_morf2_mean_rel_diff_plot = latest_ont_morf2_mean_rel_diff %>%
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) +
+  geom_col() +
+  geom_text(aes(label = round(rel_diff, 2)), vjust=-0.5, size = 3, color = "black") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("ONT morf2 mean rel diff") +
+  ylab("Mean Relative Difference")
+
+latest_combined_morf_quant_plot = plot_grid(latest_pbio_morf2_mean_rel_diff_plot,
+                                            latest_ont_morf2_mean_rel_diff_plot,
+                                            ncol=1)
+
+ggsave(latest_combined_morf_quant_plot,
+       file="combined_morf_quant_plot.latest_tools.pdf",
+       height=6,
+       width=8)
+
+latest_combined_morf_quant_plot
+
+```
+
+## Oarfish-style quantification metrics
+
+```{r oarfish_read_metrics}
+
+morf2_oarfish_metrics_file = "morf2.oarfish_style_metrics.tsv"
+
+if (file.exists(morf2_oarfish_metrics_file)) {
+  morf2_oarfish_metrics_df = read.csv(morf2_oarfish_metrics_file, sep="\t", header=T)
+  morf2_oarfish_metrics_df$data_name = str_replace(morf2_oarfish_metrics_df$data_name, "morf2_", "")
+} else {
+  message(morf2_oarfish_metrics_file, " not found; run make summarize after regenerating per-sample oarfish_style_metrics.tsv files.")
+  morf2_oarfish_metrics_df = tibble()
+}
+
+morf2_oarfish_metrics_df %>% head()
+
+```
+
+```{r oarfish_prep_metrics}
+
+higher_is_better_metrics = c(
+  "spearman",
+  "pearson_log1p",
+  "ccc_log1p",
+  "kendall",
+  "pr_auc",
+  "average_precision"
+)
+
+lower_is_better_metrics = c(
+  "rmse",
+  "nrmse_mean_truth",
+  "mard"
+)
+
+oarfish_metric_labels = tribble(
+  ~metric, ~metric_label,
+  "spearman", "Spearman",
+  "pearson_log1p", "Pearson log1p",
+  "ccc_log1p", "CCC log1p",
+  "kendall", "Kendall",
+  "rmse", "RMSE",
+  "nrmse_mean_truth", "NRMSE",
+  "mard", "MARD",
+  "pr_auc", "PR-AUC",
+  "average_precision", "Average precision"
+)
+
+if (nrow(morf2_oarfish_metrics_df) > 0) {
+  morf2_oarfish_metrics_long = morf2_oarfish_metrics_df %>%
+    dplyr::select(name, data_name, all_of(c(higher_is_better_metrics, lower_is_better_metrics))) %>%
+    pivot_longer(
+      cols = all_of(c(higher_is_better_metrics, lower_is_better_metrics)),
+      names_to = "metric",
+      values_to = "metric_value"
+    ) %>%
+    left_join(oarfish_metric_labels, by="metric") %>%
+    mutate(
+      direction = if_else(metric %in% higher_is_better_metrics, "higher is better", "lower is better"),
+      metric_label = factor(metric_label, levels=oarfish_metric_labels$metric_label)
+    )
+} else {
+  morf2_oarfish_metrics_long = tibble()
+}
+
+```
+
+```{r oarfish_rank_metrics}
+
+if (nrow(morf2_oarfish_metrics_long) > 0) {
+  morf2_oarfish_metric_rankings = morf2_oarfish_metrics_long %>%
+    group_by(data_name, metric, metric_label, direction) %>%
+    mutate(
+      metric_rank = if_else(
+        direction == "higher is better",
+        min_rank(desc(metric_value)),
+        min_rank(metric_value)
+      )
+    ) %>%
+    ungroup()
+
+  morf2_oarfish_mean_rankings = morf2_oarfish_metric_rankings %>%
+    group_by(name, metric, metric_label, direction) %>%
+    summarize(
+      mean_metric_value = mean(metric_value, na.rm=TRUE),
+      mean_rank = mean(metric_rank, na.rm=TRUE),
+      .groups = "drop"
+    )
+} else {
+  morf2_oarfish_metric_rankings = tibble()
+  morf2_oarfish_mean_rankings = tibble()
+}
+
+```
+
+```{r oarfish_reorder_helpers}
+
+reorder_within = function(x, by, within, fun=mean, sep="___", ...) {
+  new_x = paste(x, within, sep=sep)
+  stats::reorder(new_x, by, FUN=fun)
+}
+
+scale_y_reordered = function(..., sep="___") {
+  scale_y_discrete(labels=function(x) gsub(paste0(sep, ".+$"), "", x), ...)
+}
+
+```
+
+Note: PR-AUC and average precision require both expressed and unexpressed truth
+isoforms in the scored reference set. In the current MORF truth sets, all scored
+multi-exon MORF isoforms are truth-expressed (`n_truth_unexpressed = 0`), so
+those two metrics are reported as `NA` and their plot facets are not
+interpretable for MORFs.
+
+```{r oarfish_mean_rank_plot}
+
+if (nrow(morf2_oarfish_mean_rankings) > 0) {
+  oarfish_metric_mean_rank_plot = morf2_oarfish_mean_rankings %>%
+    ggplot(aes(x=mean_rank, y=reorder_within(name, -mean_rank, metric_label), fill=mean_rank)) +
+    geom_col() +
+    geom_text(aes(label=round(mean_rank, 1)), hjust=-0.1, size=2.5) +
+    facet_wrap(~metric_label, scales="free_y") +
+    scale_y_reordered() +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_fill_gradient(low="darkgreen", high="lightgreen") +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean rank across MORF samples") +
+    ylab("") +
+    ggtitle("MORFs - Oarfish-style metric rankings")
+
+  oarfish_metric_mean_rank_plot
+}
+
+```
+
+```{r oarfish_mean_value_plot}
+
+if (nrow(morf2_oarfish_mean_rankings) > 0) {
+  oarfish_metric_value_plot = morf2_oarfish_mean_rankings %>%
+    ggplot(aes(x=mean_metric_value, y=reorder_within(name, mean_metric_value, metric_label), fill=mean_metric_value)) +
+    geom_col() +
+    facet_wrap(~metric_label, scales="free") +
+    scale_y_reordered() +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean metric value across MORF samples") +
+    ylab("") +
+    ggtitle("MORFs - Oarfish-style mean metric values")
+
+  oarfish_metric_value_plot
+}
+
+```
+
+```{r oarfish_save_plots}
+
+if (exists("oarfish_metric_mean_rank_plot")) {
+  ggsave(oarfish_metric_mean_rank_plot,
+         file="morf2_oarfish_style_metric_rankings.pdf",
+         width=11,
+         height=8.5)
+}
+
+if (exists("oarfish_metric_value_plot")) {
+  ggsave(oarfish_metric_value_plot,
+         file="morf2_oarfish_style_metric_values.pdf",
+         width=11,
+         height=8.5)
+}
+
+```
+
+```{r oarfish_latest_rank_plot}
+
+if (nrow(morf2_oarfish_mean_rankings) > 0) {
+  morf2_oarfish_latest_mean_rankings = morf2_oarfish_mean_rankings %>%
+    filter(as.character(name) %in% latest_programs)
+
+  oarfish_latest_metric_mean_rank_plot = morf2_oarfish_latest_mean_rankings %>%
+    ggplot(aes(x=mean_rank, y=reorder_within(name, -mean_rank, metric_label), fill=mean_rank)) +
+    geom_col() +
+    geom_text(aes(label=round(mean_rank, 1)), hjust=-0.1, size=2.5) +
+    facet_wrap(~metric_label, scales="free_y") +
+    scale_y_reordered() +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_fill_gradient(low="darkgreen", high="lightgreen") +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean rank across MORF samples") +
+    ylab("") +
+    ggtitle("MORFs - Oarfish-style metric rankings, latest tools")
+
+  oarfish_latest_metric_mean_rank_plot
+}
+
+```
+
+```{r oarfish_save_latest_plot}
+
+if (exists("oarfish_latest_metric_mean_rank_plot")) {
+  ggsave(oarfish_latest_metric_mean_rank_plot,
+         file="morf2_oarfish_style_metric_rankings.latest_tools.pdf",
+         width=11,
+         height=8.5)
+}
+
+```

@@ -1,0 +1,32 @@
+---
+title: "expr_compare_example"
+output: html_document
+date: "2025-05-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+
+```{r}
+
+LRAA_compare = read.csv("LRAA.ref_quant_compare.tsv", header=T, sep="\t")
+
+LRAA_compare %>% head()
+```
+
+```{r}
+
+LRAA_compare %>% ggplot(aes(y=log1p(LRAA_tpm), x=log1p(ref_tpm))) + geom_point()
+
+
+
+```
+
+
+
+
+

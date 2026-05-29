@@ -1,0 +1,268 @@
+---
+title: "examine_expr_correlations"
+output: github_document
+date: "2025-08-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+
+expr_cors = read.csv("all_expr_correlations.tsv", header=T, sep="\t", check.names=FALSE) %>% rename(methodA = `Unnamed: 0`)
+
+expr_cors %>% head()
+
+```
+
+
+```{r}
+
+expr_cors = expr_cors %>% separate_wider_delim(data_name, delim = "_", 
+                      names = c("prefix", "cell_line", "replicate", "suffix"),
+                      too_few = "align_start") %>%
+  select(-prefix, -suffix)
+
+expr_cors %>% head()
+
+
+```
+
+```{r}
+
+expr_cors = expr_cors %>% gather(key='methodB', value='cor_val', -methodA, -cell_line, -replicate)
+
+
+expr_cors %>% head()
+
+```
+
+```{r}
+# determine mean cor_val across replicates
+
+expr_cors_mean = expr_cors %>% group_by(cell_line, methodA, methodB) %>% summarize(mean_R = mean(cor_val))
+
+expr_cors_mean %>% head()
+
+```
+
+```{r}
+
+get_latest_methods = function(methods) {
+
+  method_versions = tibble(method = methods) %>%
+    distinct(method) %>%
+    mutate(method = as.character(method),
+           Tool = str_remove(method, "-v[0-9].*$"),
+           Version = str_match(method, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned = method_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned = method_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned, unversioned) %>%
+    pull(method)
+}
+
+latest_methods = get_latest_methods(c(expr_cors$methodA, expr_cors$methodB))
+
+latest_methods
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(cluster)
+library(ggdendro)
+library(patchwork)
+
+heatmap_cor_plot_with_dendrogram = function(cell_line_selected, methods_filter = NULL) {
+  # Filter data for selected cell line
+  data_filtered <- expr_cors_mean %>% 
+    filter(cell_line == cell_line_selected)
+
+  if (! is.null(methods_filter)) {
+    data_filtered <- data_filtered %>%
+      filter(as.character(methodA) %in% methods_filter,
+             as.character(methodB) %in% methods_filter)
+  }
+  
+  # Create a wide-format correlation matrix for clustering
+  cor_matrix <- data_filtered %>%
+    select(methodA, methodB, mean_R) %>%
+    tidyr::pivot_wider(names_from = methodB, values_from = mean_R) %>%
+    column_to_rownames("methodA") %>%
+    as.matrix()
+  
+  # Perform hierarchical clustering
+  dist_matrix <- dist(cor_matrix)
+  hclust_result <- hclust(dist_matrix, method = "complete")
+  
+  # Get the dendrogram order
+  method_order <- rownames(cor_matrix)[hclust_result$order]
+  n_methods <- length(method_order)
+  
+  # Create upper triangle mask and reorder data
+  plot_data <- data_filtered %>%
+    # Convert to factors with dendrogram order
+    mutate(
+      methodA = factor(methodA, levels = method_order),
+      methodB = factor(methodB, levels = method_order)
+    ) %>%
+    # Keep only the strict upper triangle, excluding self-correlations
+    filter(as.numeric(methodA) < as.numeric(methodB))
+  
+  # Create the heatmap plot
+  heatmap_plot <- ggplot(plot_data, aes(x = methodA, y = methodB, fill = mean_R)) +
+    geom_tile() +
+    scale_fill_gradient(
+      low = "white", 
+      high = "blue",
+      name = "Mean R"
+    ) +
+    scale_y_discrete(limits = method_order) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.y = element_text(),
+      axis.title = element_blank(),
+      panel.grid = element_blank()
+    ) +
+    coord_fixed() +
+    labs(title = paste("Correlation Heatmap -", cell_line_selected))
+  
+  # Create dendrogram plot
+  dend_data <- dendro_data(hclust_result)
+  
+  dend_plot <- ggplot(segment(dend_data)) +
+    geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) +
+    scale_x_continuous(limits = c(0.5, n_methods + 0.5), expand = c(0, 0)) +
+    coord_flip() +
+    scale_y_reverse(expand = c(0, 0.1)) +
+    theme_void() +
+    theme(plot.margin = margin(t = 5, r = 0, b = 5, l = 5))
+  
+  # Use patchwork to combine - it should preserve alignment
+  combined <- dend_plot + heatmap_plot + 
+    plot_layout(widths = c(1.5, 3))
+  
+  return(combined)
+}
+```
+
+
+
+
+
+
+
+```{r}
+
+BT474_plot = heatmap_cor_plot_with_dendrogram("BT474")
+
+ggsave(BT474_plot, file="BT474_expr_cor_plot.pdf", 
+       width = 6, height = 4, units = "in")
+BT474_plot
+
+```
+
+```{r}
+
+HG002_plot = heatmap_cor_plot_with_dendrogram("HG002")
+
+ggsave(HG002_plot, file="HG002_expr_cor_plot.pdf", 
+       width = 6, height = 4, units = "in")
+
+HG002_plot
+
+```
+
+
+
+```{r}
+
+K562_plot = heatmap_cor_plot_with_dendrogram("K562")
+
+ggsave(K562_plot, file="K562_expr_cor_plot.pdf", 
+       width = 6, height = 4, units = "in")
+
+K562_plot
+
+```
+
+```{r}
+
+UHRR_plot = heatmap_cor_plot_with_dendrogram("UHRR")
+
+ggsave(UHRR_plot, file="UHRR_expr_cor_plot.pdf", 
+       width = 6, height = 4, units = "in")
+
+UHRR_plot
+
+```
+
+
+```{r}
+library(cowplot)
+# Use patchwork for the entire combination
+combo_plot = plot_grid(BT474_plot, HG002_plot, 
+                        K562_plot, UHRR_plot,
+                        ncol=1)
+
+# Save using pdf() device instead of ggsave
+pdf("summary_CellLines_corr_plots.pdf", width=7, height=20)
+print(combo_plot)
+dev.off()
+
+# For display
+combo_plot
+
+```
+
+```{r}
+
+BT474_latest_plot = heatmap_cor_plot_with_dendrogram("BT474", latest_methods)
+
+ggsave(BT474_latest_plot, file="BT474_expr_cor_plot.latest_tools.pdf",
+       width = 6, height = 4, units = "in")
+
+HG002_latest_plot = heatmap_cor_plot_with_dendrogram("HG002", latest_methods)
+
+ggsave(HG002_latest_plot, file="HG002_expr_cor_plot.latest_tools.pdf",
+       width = 6, height = 4, units = "in")
+
+K562_latest_plot = heatmap_cor_plot_with_dendrogram("K562", latest_methods)
+
+ggsave(K562_latest_plot, file="K562_expr_cor_plot.latest_tools.pdf",
+       width = 6, height = 4, units = "in")
+
+UHRR_latest_plot = heatmap_cor_plot_with_dendrogram("UHRR", latest_methods)
+
+ggsave(UHRR_latest_plot, file="UHRR_expr_cor_plot.latest_tools.pdf",
+       width = 6, height = 4, units = "in")
+
+latest_combo_plot = plot_grid(BT474_latest_plot, HG002_latest_plot,
+                              K562_latest_plot, UHRR_latest_plot,
+                              ncol=1)
+
+pdf("summary_CellLines_corr_plots.latest_tools.pdf", width=7, height=20)
+print(latest_combo_plot)
+dev.off()
+
+latest_combo_plot
+
+```
+
+
+
+

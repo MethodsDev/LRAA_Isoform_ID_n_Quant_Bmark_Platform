@@ -1,0 +1,237 @@
+---
+title: "examine_expr_correlations"
+output: github_document
+date: "2025-08-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+```
+
+
+```{r}
+
+expr_cors = read.csv("all_expr_correlations.tsv", header=T, sep="\t", check.names=FALSE) %>% rename(methodA = `Unnamed: 0`)
+
+expr_cors %>% head()
+
+```
+
+
+```{r}
+
+expr_cors = expr_cors %>% separate_wider_delim(data_name, delim = "_", 
+                      names = c("prefix", "cell_line") ) %>%
+  select(-prefix)
+
+expr_cors %>% head()
+
+
+```
+
+```{r}
+
+expr_cors = expr_cors %>% gather(key='methodB', value='R', -methodA, -cell_line)
+
+
+expr_cors %>% head()
+
+```
+
+```{r}
+# determine mean cor_val across replicates
+
+expr_cors_mean = expr_cors %>% group_by(methodA, methodB) %>% summarize(R = mean(R))
+
+expr_cors_mean %>% head()
+
+```
+
+```{r}
+
+get_latest_methods = function(methods) {
+
+  method_versions = tibble(method = methods) %>%
+    distinct(method) %>%
+    mutate(method = as.character(method),
+           Tool = str_remove(method, "-v[0-9].*$"),
+           Version = str_match(method, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned = method_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned = method_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned, unversioned) %>%
+    pull(method)
+}
+
+latest_methods = get_latest_methods(c(expr_cors$methodA, expr_cors$methodB))
+
+latest_methods
+
+```
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(cluster)
+library(ggdendro)
+library(patchwork)
+
+heatmap_cor_plot_with_dendrogram = function(df, title_token, methods_filter = NULL) {
+
+  if (! is.null(methods_filter)) {
+    df = df %>%
+      filter(as.character(methodA) %in% methods_filter,
+             as.character(methodB) %in% methods_filter)
+  }
+  
+  # Create a wide-format correlation matrix for clustering
+  cor_matrix <- df %>%
+    select(methodA, methodB, R) %>%
+    tidyr::pivot_wider(names_from = methodB, values_from = R) %>%
+    column_to_rownames("methodA") %>%
+    as.matrix()
+  
+  # Perform hierarchical clustering
+  dist_matrix <- dist(cor_matrix)
+  hclust_result <- hclust(dist_matrix, method = "complete")
+  
+  # Get the dendrogram order
+  method_order <- rownames(cor_matrix)[hclust_result$order]
+  n_methods <- length(method_order)
+  
+  # Create upper triangle mask and reorder data
+  plot_data <- df%>%
+    # Convert to factors with dendrogram order
+    mutate(
+      methodA = factor(methodA, levels = method_order),
+      methodB = factor(methodB, levels = method_order)
+    ) %>%
+    # Keep only the strict upper triangle, excluding self-correlations
+    filter(as.numeric(methodA) < as.numeric(methodB))
+  
+  # Create the plot
+  heatmap_plot <- ggplot(plot_data, aes(x = methodA, y = methodB, fill = R)) +
+    geom_tile() +
+    scale_fill_gradient(
+      low = "white", 
+      high = "blue",
+      name = "R"
+    ) +
+    scale_x_discrete(limits = method_order, drop = FALSE) +
+    scale_y_discrete(limits = method_order, drop = FALSE) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.y = element_text(),
+      axis.title = element_blank(),
+      panel.grid = element_blank()
+    ) +
+    coord_fixed() +  # Keep square tiles
+    labs(title = paste("Correlation Heatmap -", title_token))
+  
+  # Create dendrogram plot (rotated to orient leaves toward heatmap)
+  dend_data <- dendro_data(hclust_result)
+  dend_plot <- ggplot(segment(dend_data)) +
+    geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) +
+    scale_x_continuous(limits = c(0.5, n_methods + 0.5), expand = c(0, 0)) +
+    coord_flip() +
+    scale_y_reverse(expand = c(0, 0.1)) +
+    theme_void() +
+    theme(plot.margin = margin(t = 5, r = 0, b = 5, l = 5))
+  
+  # Display both plots side by side using:
+  dend_heatmap_plot = dend_plot + heatmap_plot + plot_layout(widths = c(1, 3))
+  
+  return(dend_heatmap_plot)
+  
+}
+
+```
+
+```{r}
+
+cor_heatmap_A549_plot = heatmap_cor_plot_with_dendrogram(expr_cors %>% filter(cell_line=="A549"), "A549")
+
+cor_heatmap_A549_plot
+
+```
+
+
+```{r}
+
+cor_heatmap_MCF7_plot = heatmap_cor_plot_with_dendrogram(expr_cors %>% filter(cell_line=="MCF7"), "MCF7")
+
+cor_heatmap_MCF7_plot
+
+```
+
+
+```{r}
+
+SGNex_expr_cor_plot = plot_grid(cor_heatmap_A549_plot,
+                                cor_heatmap_MCF7_plot,
+                                ncol=1)
+
+
+ggsave(SGNex_expr_cor_plot, file="SGNex_expr_cor_plot.pdf", width=6, height=10)
+
+SGNex_expr_cor_plot
+
+```
+
+```{r}
+
+cor_heatmap_A549_latest_plot = heatmap_cor_plot_with_dendrogram(
+  expr_cors %>% filter(cell_line=="A549"),
+  "A549",
+  latest_methods
+)
+
+cor_heatmap_MCF7_latest_plot = heatmap_cor_plot_with_dendrogram(
+  expr_cors %>% filter(cell_line=="MCF7"),
+  "MCF7",
+  latest_methods
+)
+
+SGNex_expr_cor_latest_plot = plot_grid(cor_heatmap_A549_latest_plot,
+                                       cor_heatmap_MCF7_latest_plot,
+                                       ncol=1)
+
+ggsave(SGNex_expr_cor_latest_plot,
+       file="SGNex_expr_cor_plot.latest_tools.pdf",
+       width=6,
+       height=10)
+
+SGNex_expr_cor_latest_plot
+
+```
+
+
+
+
+
+```{r}
+
+
+heatmap_cor_plot_with_dendrogram(expr_cors_mean, "mean-A549,MCF7")
+
+
+```
+
+
+
+
+
+
+

@@ -1,0 +1,724 @@
+---
+title: "QUANT_only_summary"
+output: github_document
+date: "2025-02-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Arabidopsis
+
+## Pearson Cor
+
+```{r}
+
+arabidopsis_pearson_cor_df = read.csv("arabidopsis_isoseqsim.pearson_cor.tsv", header=T, sep="\t")  %>% dplyr::select(name, cor_value, data_name)
+
+arabidopsis_pearson_cor_df$data_name = str_replace(arabidopsis_pearson_cor_df$data_name, "arabidopsis_isoseqsim_", "")
+
+arabidopsis_pearson_cor_df %>% head()
+
+```
+
+
+```{r}
+# rank according to mean cor val
+pearson_cor_df_ranking = arabidopsis_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+
+
+arabidopsis_pearson_cor_df$name = factor(arabidopsis_pearson_cor_df$name, levels=pearson_cor_df_ranking)
+
+```
+
+```{r}
+
+arabidopsis_pearson_cor_df %>% ggplot(aes(x=name, y=cor_value)) + geom_col() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~data_name, nrow=1) +
+  ggtitle("Arabidopsis - Pearson cor for expr")
+
+
+```
+
+
+## Spearman Cor
+
+```{r}
+
+arabidopsis_spearman_cor_df = read.csv("arabidopsis_isoseqsim.spearman_cor.tsv", header=T, sep="\t")  %>% dplyr::select(name, cor_value, data_name)
+
+arabidopsis_spearman_cor_df$data_name = str_replace(arabidopsis_spearman_cor_df$data_name, "arabidopsis_isoseqsim_", "")
+
+arabidopsis_spearman_cor_df %>% head()
+
+
+```
+
+
+```{r}
+# rank according to mean cor val
+spearman_cor_df_ranking = arabidopsis_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+
+
+arabidopsis_spearman_cor_df$name = factor(arabidopsis_spearman_cor_df$name, levels=pearson_cor_df_ranking)
+
+```
+
+```{r}
+
+arabidopsis_spearman_cor_df %>% ggplot(aes(x=name, y=cor_value)) + geom_col() +
+   theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+   facet_wrap(~data_name, nrow=1) +
+  ggtitle("Arabidopsis - Spearman cor")
+
+
+```
+
+
+## Median relative difference
+
+```{r}
+arabidopsis_median_rel_diff = read.csv("arabidopsis_isoseqsim.median_rel_diff.tsv", sep="\t", header=T) %>%
+  dplyr::select(name, rel_diff, data_name)
+
+arabidopsis_median_rel_diff$data_name  = str_replace(arabidopsis_median_rel_diff$data_name, "arabidopsis_isoseqsim_", "")
+
+arabidopsis_median_rel_diff %>% head()
+```
+
+
+```{r}
+# rank according to median relative difference
+mrel_median_diff_ranking = arabidopsis_median_rel_diff %>% group_by(name) %>% summarize(mrel_diff = mean(rel_diff)) %>% arrange(mrel_diff) %>% pull(name)
+
+
+arabidopsis_median_rel_diff$name = factor(arabidopsis_median_rel_diff$name, levels=mrel_median_diff_ranking)
+
+```
+
+
+```{r}
+
+arabidopsis_median_rel_diff %>% ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+    theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~data_name, nrow=1) +
+  ggtitle("Arabidopsis - median rel diff")
+
+
+```
+
+
+## Mean relative difference
+
+
+```{r}
+arabidopsis_mean_rel_diff = read.csv("arabidopsis_isoseqsim.mean_rel_diff.tsv", sep="\t", header=T) %>%
+  dplyr::select(name, rel_diff, data_name)
+
+arabidopsis_mean_rel_diff$data_name  = str_replace(arabidopsis_mean_rel_diff$data_name, "arabidopsis_isoseqsim_", "")
+
+arabidopsis_mean_rel_diff %>% head()
+```
+
+
+```{r}
+# rank according to median relative difference
+mrel_mean_diff_ranking = arabidopsis_mean_rel_diff %>% group_by(name) %>% summarize(mrel_diff = mean(rel_diff)) %>% arrange(mrel_diff) %>% pull(name)
+
+
+arabidopsis_mean_rel_diff$name = factor(arabidopsis_mean_rel_diff$name, levels=mrel_mean_diff_ranking)
+
+```
+
+
+```{r}
+
+arabidopsis_mean_rel_diff %>% ggplot(aes(x=name, y=rel_diff)) + geom_col() +
+  theme_bw() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~data_name, nrow=1) + 
+  ggtitle("Arabidopsis - mean rel diff")
+
+
+```
+
+
+
+```{r}
+
+arabidopsis_mean_rel_diff %>% ggplot(aes(x=name, y=factor(data_name, levels=c("e085", "e050", "e016", "e000")), fill=-1*log(rel_diff))) +
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+   ggtitle("Quant mean relative difference for arabidopsis simulated long isoform reads")
+
+
+```
+
+```{r}
+
+get_latest_programs = function(data_df) {
+
+  program_versions = data_df %>%
+    distinct(name) %>%
+    mutate(name = as.character(name),
+           Tool = str_remove(name, "-v[0-9].*$"),
+           Version = str_match(name, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned_programs = program_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned_programs = program_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned_programs, unversioned_programs) %>%
+    pull(name)
+}
+
+latest_programs = get_latest_programs(arabidopsis_mean_rel_diff)
+
+latest_programs
+
+```
+
+
+# plot in heatmap form with individual rankings
+
+
+```{r}
+
+get_ranked_df = function(data_name_val) {
+  
+  ranked_df =   arabidopsis_mean_rel_diff %>% filter(data_name == data_name_val)
+  
+  ranked_progs = ranked_df %>% arrange(rel_diff) %>% pull(name)
+  
+  ranked_df$name = factor(ranked_df$name, levels=ranked_progs)
+  
+  return(ranked_df)
+ 
+}
+
+
+```
+
+
+```{r}
+
+color_scale_limit_range = c(0,2)
+
+```
+
+```{r}
+e000_mean_expr_df = get_ranked_df("e000")
+
+e000_mean_expr_tile_plot = e000_mean_expr_df %>% ggplot(aes(x=name, y=data_name, fill=rel_diff)) + 
+  geom_tile()  +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e000")
+
+e000_mean_expr_tile_plot
+
+```
+
+
+```{r}
+
+e000_mean_expr_bar_plot = e000_mean_expr_df %>% ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + 
+  geom_col()  +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e000") +
+  ylab("Mean Relative Difference")
+
+e000_mean_expr_bar_plot
+
+```
+
+
+```{r}
+
+e016_mean_expr_df = get_ranked_df("e016")
+
+e016_mean_expr_tile_plot = e016_mean_expr_df %>% ggplot(aes(x=name, y=data_name, fill=rel_diff)) + 
+  geom_tile()  +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e016")
+
+e016_mean_expr_tile_plot
+
+
+```
+
+
+```{r}
+
+e016_mean_expr_bar_plot = e016_mean_expr_df %>% ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + 
+  geom_col()  +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e016") +
+  ylab("Mean Relative Difference")
+
+e016_mean_expr_bar_plot
+
+```
+
+
+```{r}
+e050_mean_expr_df = get_ranked_df("e050")
+
+e050_mean_expr_tile_plot = e050_mean_expr_df %>% ggplot(aes(x=name, y=data_name, fill=rel_diff)) + 
+  geom_tile()  +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e050")
+
+e050_mean_expr_tile_plot
+
+
+```
+
+
+```{r}
+
+e050_mean_expr_bar_plot = e050_mean_expr_df %>% ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + 
+  geom_col()  +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e050") +
+  ylab("Mean Relative Difference")
+
+e050_mean_expr_bar_plot
+
+```
+
+
+
+
+```{r}
+
+e085_mean_expr_df = get_ranked_df("e085")
+
+e085_mean_expr_tile_plot = e085_mean_expr_df %>% ggplot(aes(x=name, y=data_name, fill=rel_diff)) + 
+  geom_tile()  +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e085")
+
+e085_mean_expr_tile_plot
+
+```
+
+
+```{r}
+
+e085_mean_expr_bar_plot = e085_mean_expr_df %>% ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) + 
+  geom_col()  +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  ggtitle("e085") +
+  ylab("Mean Relative Difference")
+
+e085_mean_expr_bar_plot
+
+```
+
+
+```{r}
+
+library(cowplot)
+
+summary_tile_plot = plot_grid(e000_mean_expr_tile_plot,
+                              e016_mean_expr_tile_plot,
+                              e050_mean_expr_tile_plot,
+                              e085_mean_expr_tile_plot,
+                              ncol=1) 
+
+summary_tile_plot
+
+```
+
+
+```{r}
+
+summary_bar_plot = plot_grid(e000_mean_expr_bar_plot,
+                             e016_mean_expr_bar_plot,
+                             e050_mean_expr_bar_plot,
+                             e085_mean_expr_bar_plot,
+                             ncol=1) 
+
+summary_bar_plot
+
+```
+
+
+
+
+```{r}
+
+ggsave(summary_bar_plot, file="arabidopsis_sim_quant_summary_barplot.pdf", width=8, height=10)
+
+```
+
+```{r}
+
+get_ranked_latest_df = function(data_name_val) {
+
+  ranked_df = arabidopsis_mean_rel_diff %>%
+    filter(data_name == data_name_val,
+           as.character(name) %in% latest_programs)
+
+  ranked_progs = ranked_df %>%
+    arrange(rel_diff) %>%
+    pull(name)
+
+  ranked_df$name = factor(ranked_df$name, levels=ranked_progs)
+
+  return(ranked_df)
+}
+
+e000_latest_mean_expr_df = get_ranked_latest_df("e000")
+
+e000_latest_mean_expr_tile_plot = e000_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=data_name, fill=rel_diff)) +
+  geom_tile() +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e000")
+
+e000_latest_mean_expr_bar_plot = e000_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) +
+  geom_col() +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e000") +
+  ylab("Mean Relative Difference")
+
+e016_latest_mean_expr_df = get_ranked_latest_df("e016")
+
+e016_latest_mean_expr_tile_plot = e016_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=data_name, fill=rel_diff)) +
+  geom_tile() +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e016")
+
+e016_latest_mean_expr_bar_plot = e016_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) +
+  geom_col() +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e016") +
+  ylab("Mean Relative Difference")
+
+e050_latest_mean_expr_df = get_ranked_latest_df("e050")
+
+e050_latest_mean_expr_tile_plot = e050_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=data_name, fill=rel_diff)) +
+  geom_tile() +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e050")
+
+e050_latest_mean_expr_bar_plot = e050_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) +
+  geom_col() +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e050") +
+  ylab("Mean Relative Difference")
+
+e085_latest_mean_expr_df = get_ranked_latest_df("e085")
+
+e085_latest_mean_expr_tile_plot = e085_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=data_name, fill=rel_diff)) +
+  geom_tile() +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e085")
+
+e085_latest_mean_expr_bar_plot = e085_latest_mean_expr_df %>%
+  ggplot(aes(x=name, y=rel_diff, fill=rel_diff)) +
+  geom_col() +
+  geom_text(aes(label=round(rel_diff, 2)), vjust=-0.5, color="black", size=3) +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", limits=color_scale_limit_range) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("e085") +
+  ylab("Mean Relative Difference")
+
+latest_summary_tile_plot = plot_grid(e000_latest_mean_expr_tile_plot,
+                                     e016_latest_mean_expr_tile_plot,
+                                     e050_latest_mean_expr_tile_plot,
+                                     e085_latest_mean_expr_tile_plot,
+                                     ncol=1)
+
+latest_summary_tile_plot
+
+```
+
+```{r}
+
+latest_summary_bar_plot = plot_grid(e000_latest_mean_expr_bar_plot,
+                                    e016_latest_mean_expr_bar_plot,
+                                    e050_latest_mean_expr_bar_plot,
+                                    e085_latest_mean_expr_bar_plot,
+                                    ncol=1)
+
+latest_summary_bar_plot
+
+```
+
+```{r}
+
+ggsave(latest_summary_bar_plot,
+       file="arabidopsis_sim_quant_summary_barplot.latest_tools.pdf",
+       width=8,
+       height=10)
+
+```
+
+## Oarfish-style quantification metrics
+
+```{r oarfish_read_metrics}
+
+arabidopsis_oarfish_metrics_file = "arabidopsis_isoseqsim.oarfish_style_metrics.tsv"
+
+if (file.exists(arabidopsis_oarfish_metrics_file)) {
+  arabidopsis_oarfish_metrics_df = read.csv(arabidopsis_oarfish_metrics_file, sep="\t", header=T)
+  arabidopsis_oarfish_metrics_df$data_name = str_replace(arabidopsis_oarfish_metrics_df$data_name, "arabidopsis_isoseqsim_", "")
+} else {
+  message(arabidopsis_oarfish_metrics_file, " not found; run make summarize after regenerating per-sample oarfish_style_metrics.tsv files.")
+  arabidopsis_oarfish_metrics_df = tibble()
+}
+
+arabidopsis_oarfish_metrics_df %>% head()
+
+```
+
+```{r oarfish_prep_metrics}
+
+higher_is_better_metrics = c(
+  "spearman",
+  "pearson_log1p",
+  "ccc_log1p",
+  "kendall",
+  "pr_auc",
+  "average_precision"
+)
+
+lower_is_better_metrics = c(
+  "rmse",
+  "nrmse_mean_truth",
+  "mard"
+)
+
+oarfish_metric_labels = tribble(
+  ~metric, ~metric_label,
+  "spearman", "Spearman",
+  "pearson_log1p", "Pearson log1p",
+  "ccc_log1p", "CCC log1p",
+  "kendall", "Kendall",
+  "rmse", "RMSE",
+  "nrmse_mean_truth", "NRMSE",
+  "mard", "MARD",
+  "pr_auc", "PR-AUC",
+  "average_precision", "Average precision"
+)
+
+if (nrow(arabidopsis_oarfish_metrics_df) > 0) {
+  arabidopsis_oarfish_metrics_long = arabidopsis_oarfish_metrics_df %>%
+    dplyr::select(name, data_name, all_of(c(higher_is_better_metrics, lower_is_better_metrics))) %>%
+    pivot_longer(
+      cols = all_of(c(higher_is_better_metrics, lower_is_better_metrics)),
+      names_to = "metric",
+      values_to = "metric_value"
+    ) %>%
+    left_join(oarfish_metric_labels, by="metric") %>%
+    mutate(
+      direction = if_else(metric %in% higher_is_better_metrics, "higher is better", "lower is better"),
+      metric_label = factor(metric_label, levels=oarfish_metric_labels$metric_label)
+    )
+} else {
+  arabidopsis_oarfish_metrics_long = tibble()
+}
+
+```
+
+```{r oarfish_rank_metrics}
+
+if (nrow(arabidopsis_oarfish_metrics_long) > 0) {
+  arabidopsis_oarfish_metric_rankings = arabidopsis_oarfish_metrics_long %>%
+    group_by(data_name, metric, metric_label, direction) %>%
+    mutate(
+      metric_rank = if_else(
+        direction == "higher is better",
+        min_rank(desc(metric_value)),
+        min_rank(metric_value)
+      )
+    ) %>%
+    ungroup()
+
+  arabidopsis_oarfish_mean_rankings = arabidopsis_oarfish_metric_rankings %>%
+    group_by(name, metric, metric_label, direction) %>%
+    summarize(
+      mean_metric_value = mean(metric_value, na.rm=TRUE),
+      mean_rank = mean(metric_rank, na.rm=TRUE),
+      .groups = "drop"
+    )
+} else {
+  arabidopsis_oarfish_metric_rankings = tibble()
+  arabidopsis_oarfish_mean_rankings = tibble()
+}
+
+```
+
+```{r oarfish_reorder_helpers}
+
+reorder_within = function(x, by, within, fun=mean, sep="___", ...) {
+  new_x = paste(x, within, sep=sep)
+  stats::reorder(new_x, by, FUN=fun)
+}
+
+scale_y_reordered = function(..., sep="___") {
+  scale_y_discrete(labels=function(x) gsub(paste0(sep, ".+$"), "", x), ...)
+}
+
+```
+
+```{r oarfish_mean_rank_plot}
+
+if (nrow(arabidopsis_oarfish_mean_rankings) > 0) {
+  oarfish_metric_mean_rank_plot = arabidopsis_oarfish_mean_rankings %>%
+    ggplot(aes(x=mean_rank, y=reorder_within(name, -mean_rank, metric_label), fill=mean_rank)) +
+    geom_col() +
+    geom_text(aes(label=round(mean_rank, 1)), hjust=-0.1, size=2.5) +
+    facet_wrap(~metric_label, scales="free_y") +
+    scale_y_reordered() +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_fill_gradient(low="darkgreen", high="lightgreen") +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean rank across Arabidopsis simulations") +
+    ylab("") +
+    ggtitle("Arabidopsis - Oarfish-style metric rankings")
+
+  oarfish_metric_mean_rank_plot
+}
+
+```
+
+```{r oarfish_mean_value_plot}
+
+if (nrow(arabidopsis_oarfish_mean_rankings) > 0) {
+  oarfish_metric_value_plot = arabidopsis_oarfish_mean_rankings %>%
+    ggplot(aes(x=mean_metric_value, y=reorder_within(name, mean_metric_value, metric_label), fill=mean_metric_value)) +
+    geom_col() +
+    facet_wrap(~metric_label, scales="free") +
+    scale_y_reordered() +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean metric value across Arabidopsis simulations") +
+    ylab("") +
+    ggtitle("Arabidopsis - Oarfish-style mean metric values")
+
+  oarfish_metric_value_plot
+}
+
+```
+
+```{r oarfish_save_plots}
+
+if (exists("oarfish_metric_mean_rank_plot")) {
+  ggsave(oarfish_metric_mean_rank_plot,
+         file="arabidopsis_sim_oarfish_style_metric_rankings.pdf",
+         width=11,
+         height=8.5)
+}
+
+if (exists("oarfish_metric_value_plot")) {
+  ggsave(oarfish_metric_value_plot,
+         file="arabidopsis_sim_oarfish_style_metric_values.pdf",
+         width=11,
+         height=8.5)
+}
+
+```
+
+```{r oarfish_latest_rank_plot}
+
+if (nrow(arabidopsis_oarfish_mean_rankings) > 0) {
+  arabidopsis_oarfish_latest_mean_rankings = arabidopsis_oarfish_mean_rankings %>%
+    filter(as.character(name) %in% latest_programs)
+
+  oarfish_latest_metric_mean_rank_plot = arabidopsis_oarfish_latest_mean_rankings %>%
+    ggplot(aes(x=mean_rank, y=reorder_within(name, -mean_rank, metric_label), fill=mean_rank)) +
+    geom_col() +
+    geom_text(aes(label=round(mean_rank, 1)), hjust=-0.1, size=2.5) +
+    facet_wrap(~metric_label, scales="free_y") +
+    scale_y_reordered() +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_fill_gradient(low="darkgreen", high="lightgreen") +
+    theme_bw() +
+    theme(axis.text.y = element_text(size=6),
+          legend.position="none") +
+    xlab("Mean rank across Arabidopsis simulations") +
+    ylab("") +
+    ggtitle("Arabidopsis - Oarfish-style metric rankings, latest tools")
+
+  oarfish_latest_metric_mean_rank_plot
+}
+
+```
+
+```{r oarfish_save_latest_plot}
+
+if (exists("oarfish_latest_metric_mean_rank_plot")) {
+  ggsave(oarfish_latest_metric_mean_rank_plot,
+         file="arabidopsis_sim_oarfish_style_metric_rankings.latest_tools.pdf",
+         width=11,
+         height=8.5)
+}
+
+```
+
+
+
+
+

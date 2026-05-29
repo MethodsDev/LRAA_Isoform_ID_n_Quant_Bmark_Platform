@@ -1,0 +1,128 @@
+---
+title: "examine_TPM_variability_and_LoD_Qonly"
+output: html_document
+date: "2025-10-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+
+#!/usr/bin/env Rscript
+
+library(dplyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(tidyr)
+library(scales)
+
+# 1. Find and parse all quant files
+files <- list.files(".", pattern = "\\.LRAA\\.quant\\.expr$", recursive = TRUE, full.names = TRUE)
+
+# Extract metadata from path
+meta_from_path <- function(path) {
+  # Example: ./BT474/CL_BT474_E1_human/raw_prog_results/CL_BT474_E1_human.LRAA.quant.expr
+  cell_line <- str_match(path, "^\\.?/?([^/]+)/")[,2]  # base directory name (BT474, K562, etc.)
+  replicate <- str_match(basename(path), "_(E[0-9])_")[,2]
+  data.frame(cell_line, replicate, path, stringsAsFactors = FALSE)
+}
+
+meta_df <- bind_rows(lapply(files, meta_from_path))
+
+# 2. Read trimmed expression data
+read_expr <- function(meta) {
+  df <- read_tsv(meta$path, col_types = cols_only(
+    gene_id = col_character(),
+    transcript_id = col_character(),
+    TPM = col_double()
+  ))
+  df$cell_line <- meta$cell_line
+  df$replicate <- meta$replicate
+  df
+}
+
+expr_df <- bind_rows(lapply(split(meta_df, seq_len(nrow(meta_df))), read_expr))
+
+expr_df = expr_df %>% filter(TPM > 0)
+
+
+```
+
+
+
+```{r}
+
+
+# 3. Summarize reproducibility per transcript across replicates
+repro_df <- expr_df %>%
+  group_by(cell_line, transcript_id) %>%
+  summarise(
+    mean_TPM = mean(TPM, na.rm = TRUE),
+    n_detected = sum(TPM > 0),
+    .groups = "drop"
+  ) %>%
+  mutate(detection_class = case_when(
+    n_detected == 3 ~ "3/3 replicates",
+    n_detected == 2 ~ "2/3 replicates",
+    n_detected == 1 ~ "1/3 replicates",
+    TRUE ~ "0/3"
+  ))
+
+# 4. Bin by log10(mean TPM)
+
+low_bin = -1.4
+high_bin = 3.4
+repro_df <- repro_df %>%
+  mutate(log10_TPM = log10(mean_TPM + 1e-3)) %>%
+  mutate(log10_TPM = ifelse(log10_TPM < low_bin, low_bin, log10_TPM)) %>%
+  mutate(log10_TPM = ifelse(log10_TPM > high_bin, high_bin, log10_TPM)) %>%
+   mutate(TPM_bin = cut(log10_TPM, breaks = seq(low_bin, high_bin, by = 0.2), include.lowest = TRUE))
+
+# 5. Compute proportions within bins per cell line
+prop_df <- repro_df %>%
+  group_by(cell_line, TPM_bin, detection_class) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+# 6. Extract TPM values from bin boundaries for pretty axis labels
+bin_starts <- as.numeric(sub("\\(([^,]+),.*", "\\1", levels(repro_df$TPM_bin)))
+tpm_labels <- signif(10^bin_starts, 2)
+tpm_labels[1] <- "-inf"  # mark the first (lowest) bin as open-ended
+tpm_labels[length(tpm_labels)] = "+inf"
+
+# 7. Plot reproducibility curve with TPM axis labels
+p <- ggplot(prop_df, aes(x = TPM_bin, y = prop, fill = detection_class)) +
+  geom_bar(stat = "identity", position = "stack") +
+  facet_wrap(~ cell_line, ncol = 2) +
+  theme_bw(base_size = 12) +
+  scale_fill_manual(values = c(
+    "1/3 replicates" = "red",
+    "2/3 replicates" = "gold",
+    "3/3 replicates" = "forestgreen"
+  )) +
+  scale_x_discrete(labels = tpm_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Isoform Detection Reproducibility vs Expression (TPM)",
+    x = "Mean TPM (binned, log-spaced)",
+    y = "Proportion of isoforms",
+    fill = "Detection"
+  )
+
+print(p)
+
+
+
+```
+
+
+
+
+
+

@@ -1,0 +1,324 @@
+---
+title: "morf2_ref_guided_eval"
+output: github_document
+date: "2025-02-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+
+df = read.csv("morf2.known_and_novel_TPR_FDR_F1.tsv", sep="\t", header=T) %>% 
+  dplyr::select(data_name, Program, Metric, Value)
+
+df$data_name = str_replace(df$data_name, "morf2_", "")
+  
+
+df %>% head()
+
+
+```
+
+
+```{r}
+
+df = df %>% filter(Metric != "knownTPR")
+
+df = df %>% spread(key=Metric, value=Value) 
+
+df = df %>% dplyr::rename(Recall = `novelTPR`) %>% mutate(Precision = 1-novelFDR) %>% select(-novelFDR)
+
+df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
+
+
+```
+
+
+```{r}
+# define ranking
+
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
+
+df$Program = factor(df$Program, levels=prog_ranking)
+
+```
+
+
+
+```{r}
+
+df$Metric = factor(df$Metric, levels = c("F1", "Recall", "Precision"))
+
+```
+
+
+
+
+
+```{r}
+
+df %>% 
+  ggplot(aes(x=Program, y=Value, fill=Program)) + geom_col() +
+  facet_grid(vars(Metric), vars(data_name)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref-reduced benchmarking of Isoform ID on morf2")
+
+
+```
+
+
+```{r}
+
+df %>% 
+  ggplot(aes(x=Program, y=Value)) + geom_col() +
+  facet_grid(vars(Metric), vars(data_name)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref-reduced benchmarking of Isoform ID on morf2")
+
+
+```
+
+```{r}
+
+get_latest_programs = function(data_df) {
+
+  program_versions = data_df %>%
+    distinct(Program) %>%
+    mutate(Program = as.character(Program),
+           Tool = str_remove(Program, "-v[0-9].*$"),
+           Version = str_match(Program, "-v([0-9][0-9A-Za-z.\\-]*)$")[, 2])
+
+  latest_versioned_programs = program_versions %>%
+    filter(! is.na(Version)) %>%
+    group_by(Tool) %>%
+    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup()
+
+  unversioned_programs = program_versions %>%
+    filter(is.na(Version))
+
+  bind_rows(latest_versioned_programs, unversioned_programs) %>%
+    pull(Program)
+}
+
+latest_programs = get_latest_programs(df)
+
+latest_programs
+
+```
+
+```{r}
+
+# just the pacbio
+
+pacbio_only_plot = df %>% 
+  filter(grepl("pacbio", data_name)) %>%
+  ggplot(aes(x=Program, y=Value, fill=Value)) + geom_col() +
+  scale_fill_gradient(limits = c(0, 1)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~Metric, ncol=1) +
+  ggtitle("Ref-reduced benchmarking of Isoform ID on morf2")
+
+
+pacbio_only_plot 
+
+```
+
+```{r}
+
+ggsave(pacbio_only_plot, file="pacbio_only.summary.pdf", width=6, height=6)
+
+```
+
+
+
+
+
+# pacbio-only
+```{r}
+
+pacbio_only_df =  df %>% filter(grepl("pacbio", data_name)) 
+
+pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
+  pull(Program)
+
+pacbio_only_df$Program = factor(pacbio_only_df$Program, levels=pacbio_only_rankings)
+
+
+```
+
+
+
+```{r}
+
+
+pacbio_only_plot = pacbio_only_df %>% 
+  ggplot(aes(x=Program, y=Value, fill=Value)) + 
+  geom_col() +
+  geom_text(aes(label = round(Value, 3)), 
+            vjust = 0.5, 
+            size = 3) +
+  scale_fill_gradient(limits = c(0, 1)) +
+  theme_bw() +
+  facet_wrap(~Metric, ncol=1) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio")
+
+
+pacbio_only_plot
+
+```
+
+
+# ont-only
+
+
+```{r}
+
+ONT_only_df =  df %>% filter(grepl("ont_", data_name)) 
+
+ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
+  pull(Program)
+
+ONT_only_df$Program = factor(ONT_only_df$Program, levels=ONT_only_rankings)
+
+
+```
+
+
+```{r}
+
+ONT_only_plot = ONT_only_df %>% 
+  ggplot(aes(x=Program, y=Value, fill=Value)) + 
+  geom_col() +
+  geom_text(aes(label = round(Value, 3)), 
+            vjust = 0.5, 
+            size = 3) +
+  scale_fill_gradient(limits = c(0, 1)) +
+  theme_bw() +
+  facet_wrap(~Metric, ncol=1) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT")
+
+
+ONT_only_plot
+
+```
+
+```{r}
+
+library(gridExtra)
+grid.arrange(pacbio_only_plot, ONT_only_plot, ncol = 2)
+
+
+```
+
+```{r}
+
+pacbio_only_plot = pacbio_only_df %>% 
+  mutate(Metric = forcats::fct_rev(factor(Metric))) %>% # Reverse the factor levels in the data itself
+  ggplot(aes(x=Program, y=Metric, fill=Value)) + 
+  geom_tile(color = "white", size = 0.5) +
+  geom_text(aes(label = round(Value, 2)), 
+            size = 3, 
+            color = "white") +
+  #scale_fill_gradient(limits = c(0, 1), low = "white", high = "steelblue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio") +
+  labs(x = "Program", y = "Metric")
+
+ONT_only_plot = ONT_only_df %>% 
+  mutate(Metric = forcats::fct_rev(factor(Metric))) %>% # Reverse the factor levels in the data itself
+  ggplot(aes(x=Program, y=Metric, fill=Value)) + 
+  geom_tile(color = "white", size = 0.5) +
+  geom_text(aes(label = round(Value, 2)), 
+            size = 3, 
+            color = "white") +
+  #scale_fill_gradient(limits = c(0, 1), low = "white", high = "steelblue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT") +
+  labs(x = "Program", y = "Metric")
+
+MORFs_refGuided_plot = grid.arrange(pacbio_only_plot, ONT_only_plot, ncol = 1)
+
+
+ggsave(MORFs_refGuided_plot, file="MORFs_refGuided_plot.pdf", width=7, height=5)
+
+MORFs_refGuided_plot
+```
+
+```{r}
+
+latest_pacbio_only_df = df %>%
+  filter(grepl("pacbio", data_name),
+         as.character(Program) %in% latest_programs)
+
+latest_pacbio_only_rankings = latest_pacbio_only_df %>%
+  filter(Metric == "F1") %>%
+  arrange(desc(Value)) %>%
+  pull(Program)
+
+latest_pacbio_only_df$Program = factor(latest_pacbio_only_df$Program,
+                                       levels=latest_pacbio_only_rankings)
+
+latest_ONT_only_df = df %>%
+  filter(grepl("ont_", data_name),
+         as.character(Program) %in% latest_programs)
+
+latest_ONT_only_rankings = latest_ONT_only_df %>%
+  filter(Metric == "F1") %>%
+  arrange(desc(Value)) %>%
+  pull(Program)
+
+latest_ONT_only_df$Program = factor(latest_ONT_only_df$Program,
+                                    levels=latest_ONT_only_rankings)
+
+latest_pacbio_only_plot = latest_pacbio_only_df %>%
+  mutate(Metric = forcats::fct_rev(factor(Metric))) %>%
+  ggplot(aes(x=Program, y=Metric, fill=Value)) +
+  geom_tile(color = "white", size = 0.5) +
+  geom_text(aes(label = round(Value, 2)),
+            size = 3,
+            color = "white") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio - Latest Tools") +
+  labs(x = "Program", y = "Metric")
+
+latest_ONT_only_plot = latest_ONT_only_df %>%
+  mutate(Metric = forcats::fct_rev(factor(Metric))) %>%
+  ggplot(aes(x=Program, y=Metric, fill=Value)) +
+  geom_tile(color = "white", size = 0.5) +
+  geom_text(aes(label = round(Value, 2)),
+            size = 3,
+            color = "white") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT - Latest Tools") +
+  labs(x = "Program", y = "Metric")
+
+latest_MORFs_refGuided_plot = grid.arrange(latest_pacbio_only_plot,
+                                           latest_ONT_only_plot,
+                                           ncol = 1)
+
+ggsave(latest_MORFs_refGuided_plot,
+       file="MORFs_refGuided_plot.latest_tools.pdf",
+       width=8,
+       height=5)
+
+latest_MORFs_refGuided_plot
+```
+
+
+
+

@@ -1,0 +1,11 @@
+gtfparse
+ipykernel
+jupyter
+matplotlib
+numpy
+pandas
+papermill
+pyyaml
+scikit-learn
+scipy
+seaborn

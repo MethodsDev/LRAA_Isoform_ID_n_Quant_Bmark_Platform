@@ -1,0 +1,85 @@
+---
+title: "IGROV-1_denovo_eval"
+output: html_document
+date: "2025-07-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+
+```{r}
+
+df = read.csv("full_transcriptome_TPR_FDR_F1.tsv", header=T, sep="\t") %>%
+  dplyr::select(Program, Metric, Value) %>%
+  filter(Metric != 'novelTPR')
+
+df$data_name = "IGROV-1"
+
+df %>% head()
+```
+
+
+
+```{r}
+
+
+
+df = df %>% spread(key=Metric, value=Value) 
+
+df = df %>% dplyr::rename(Recall = `knownTPR`) %>% mutate(Precision = 1-novelFDR) %>% select(-novelFDR)
+
+df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
+
+
+```
+
+
+```{r}
+# define ranking
+
+program_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% 
+  summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
+
+df$Program = factor(df$Program, levels=program_ranking)
+
+
+```
+
+
+```{r}
+
+df$Metric = factor(df$Metric, levels = c("F1", "Recall", "Precision"))
+
+```
+
+
+```{r}
+
+df %>% ggplot(aes(x=Program, y=Value, fill=Program)) + geom_col() +
+  theme_bw() +
+  facet_grid(vars(Metric), vars(data_name)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - IGROV-1_sim")
+
+```
+
+
+```{r}
+
+df %>% ggplot(aes(x=Program, y=Value)) + geom_col() +
+  theme_bw() +
+  facet_grid(vars(Metric), vars(data_name)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - IGROV_1-sim")
+
+```
+
+
+
+
+
+
