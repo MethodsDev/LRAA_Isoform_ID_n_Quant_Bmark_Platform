@@ -11,7 +11,7 @@ directory and using the same machinery:
 
 | Regime | Top-level dir | What it measures | `--analysisType` |
 |---|---|---|---|
-| Quantification only | `QUANT_ONLY_outputs/` | Expression accuracy: tools quantify against the reference annotation | `quant_only` (or `quant_only_no_truthset`) |
+| Quantification only | `QUANT_ONLY/` | Expression accuracy: tools quantify against the reference annotation | `quant_only` (or `quant_only_no_truthset`) |
 | De novo ID | `DENOVO_ID/` | Isoform discovery accuracy: tools build transcripts without an annotation | `ref_free` |
 | Ref-guided ID | `REF_Guided/` | Both quantification + novel discovery, with the annotation as a starting point | `ref_guided` |
 
@@ -66,7 +66,7 @@ The framework is packaged as one repository:
 
 ```
 LRAA_Isoform_ID_n_Quant_Bmark_Platform/
-+--- QUANT_ONLY_outputs/
++--- QUANT_ONLY/
 |     +--- tool_registry.yaml                     <-- registry for this regime
 |     +--- arabidopsis_sim/, CellLines/, MORFs/, SG-NEx/, SIRVs/, mouse_sim/, IGROV-1_sim/
 |     |     +--- Makefile                         <-- dataset-level orchestration
@@ -306,7 +306,7 @@ Then run the deposit script to copy them into per-sample
 `raw_prog_results/` dirs:
 
 ```
-cd QUANT_ONLY_outputs/__comparator_results_all_QUANT_ONLY
+cd QUANT_ONLY/__comparator_results_all_QUANT_ONLY
 python3 deposit_comparator_outputs.py
 ```
 
@@ -419,7 +419,7 @@ Less common. To add a new dataset family (e.g. a new sim regime):
 7. If the dataset has no synthetic ground truth (real biological samples),
    you'll likely need a proxy `--truth_quant`. The convention is to use
    Oarfish-v0.9.4 byAlignment quant -- symlink it from
-   `QUANT_ONLY_outputs/<sample_dir>/raw_prog_results/`. Pass `--Venn_mode`
+   `QUANT_ONLY/<sample_dir>/raw_prog_results/`. Pass `--Venn_mode`
    to enable consensus truth-set augmentation.
 
 ## How to add a new analysis regime

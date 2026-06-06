@@ -5,7 +5,7 @@
 # given a reference annotation as a starting point and discover novel
 # isoforms / refine quantification on top of it.
 #
-# Schema is identical to QUANT_ONLY_outputs/tool_registry.yaml -- see
+# Schema is identical to QUANT_ONLY/tool_registry.yaml -- see
 # that file for the full field reference. Adding a new tool or version
 # means adding an entry here.
 #

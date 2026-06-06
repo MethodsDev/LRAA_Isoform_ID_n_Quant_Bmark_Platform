@@ -1,4 +1,4 @@
-REGIMES := QUANT_ONLY_outputs DENOVO_ID REF_Guided
+REGIMES := QUANT_ONLY DENOVO_ID REF_Guided
 
 .PHONY: all $(REGIMES) clean summarize
 

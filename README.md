@@ -4,7 +4,7 @@ This repository is a runnable skeleton for the LRAA paper benchmark framework.
 It keeps the orchestration, registries, notebook runner, and notebook templates
 for the three benchmark regimes:
 
-- `QUANT_ONLY_outputs/`: quantification-only benchmarking
+- `QUANT_ONLY/`: quantification-only benchmarking
 - `DENOVO_ID/`: reference-free isoform identification benchmarking
 - `REF_Guided/`: reference-guided isoform identification benchmarking
 
@@ -16,7 +16,7 @@ and each sample's `raw_prog_results/` directory before running.
 
 ```text
 benchmarking/                         shared Python runner, parsers, notebooks
-QUANT_ONLY_outputs/                   quantification-only regime
+QUANT_ONLY/                   quantification-only regime
 DENOVO_ID/                            de novo isoform ID regime
 REF_Guided/                           reference-guided isoform ID regime
 ```
@@ -36,7 +36,7 @@ python3 -m pip install -r requirements.txt
 Run a full regime:
 
 ```bash
-cd QUANT_ONLY_outputs
+cd QUANT_ONLY
 make
 make summarize
 ```

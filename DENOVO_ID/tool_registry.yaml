@@ -3,7 +3,7 @@
 # Single source of truth for parsing rules and display config for the
 # reference-annotation-free isoform identification regime.
 #
-# Schema is identical to QUANT_ONLY_outputs/tool_registry.yaml -- see
+# Schema is identical to QUANT_ONLY/tool_registry.yaml -- see
 # that file for the full field reference. Adding a new tool or a new
 # version of an existing tool means adding an entry here.
 #
