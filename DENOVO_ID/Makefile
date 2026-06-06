@@ -1,5 +1,5 @@
 # List of directories
-DIRS := arabidopsis_sim  CellLines  MORFs SIRVs  mouse_sim  SG-NEx #IGROV-1_sim
+DIRS := arabidopsis_sim  CellLines  MORFs SIRVs  mouse_sim  SG-NEx
 
 # Define targets for each directory
 .PHONY: all $(DIRS)
