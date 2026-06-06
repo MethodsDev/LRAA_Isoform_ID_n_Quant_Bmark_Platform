@@ -16,3 +16,11 @@ To see the exact expected filenames for a dataset, inspect its `run*.sh` files
 for `--truth_gtf`, `--truth_quant`, and `--truth_reduced_gtf` arguments. To see
 accepted comparator output names, inspect the regime-level `tool_registry.yaml`.
 
+Reference-data symlinks can be created from the benchmark reference inventory:
+
+```bash
+python3 scripts/install_references.py link
+```
+
+Use `--dry-run` to preview changes. The `install` subcommand also unpacks local
+`<dataset>.ref_data.tar.gz` inventory payloads before linking.

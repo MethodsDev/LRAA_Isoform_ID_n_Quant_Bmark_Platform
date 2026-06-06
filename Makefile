@@ -1,6 +1,6 @@
 REGIMES := QUANT_ONLY DENOVO_ID REF_Guided
 
-.PHONY: all $(REGIMES) clean summarize
+.PHONY: all $(REGIMES) clean summarize install-references
 
 all: $(REGIMES)
 
@@ -19,3 +19,5 @@ summarize:
 		$(MAKE) -C $$regime summarize || exit $$?; \
 	done
 
+install-references:
+	python3 scripts/install_references.py install

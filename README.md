@@ -12,6 +12,12 @@ Input files and generated benchmark outputs are intentionally not tracked here.
 Place externally hosted inputs into each dataset's `reference_data/` directory
 and each sample's `raw_prog_results/` directory before running.
 
+Reference files can be symlinked from the paper analysis inventory with:
+
+```bash
+python3 scripts/install_references.py link
+```
+
 ## Layout
 
 ```text
@@ -58,4 +64,3 @@ cd REF_Guided/arabidopsis_sim/arabidopsis_isoseqsim_e000
 
 See `BENCHMARKING.md` for the registry schema, run-script flags, and the
 benchmarking workflow.
-
