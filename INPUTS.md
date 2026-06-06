@@ -23,4 +23,6 @@ python3 scripts/install_references.py link
 ```
 
 Use `--dry-run` to preview changes. The `install` subcommand also unpacks local
-`<dataset>.ref_data.tar.gz` inventory payloads before linking.
+`<dataset>.ref_data.tar.gz` inventory payloads before linking. Proxy Oarfish
+quantification files are also linked into the matching sample
+`raw_prog_results/` directories unless `--skip-raw-proxy-quants` is used.

@@ -18,6 +18,9 @@ Reference files can be symlinked from the paper analysis inventory with:
 python3 scripts/install_references.py link
 ```
 
+Proxy Oarfish quantification files are also linked into the corresponding
+sample `raw_prog_results/` directories.
+
 ## Layout
 
 ```text

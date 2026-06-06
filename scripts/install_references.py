@@ -105,6 +105,7 @@ def parse_args() -> argparse.Namespace:
         args.dry_run = False
         args.force = False
         args.create_missing_dirs = False
+        args.skip_raw_proxy_quants = False
     return args
 
 
@@ -122,7 +123,12 @@ def add_link_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--create-missing-dirs",
         action="store_true",
-        help="Create missing reference_data directories instead of reporting them as skipped.",
+        help="Create missing reference_data/raw_prog_results directories instead of reporting them as skipped.",
+    )
+    parser.add_argument(
+        "--skip-raw-proxy-quants",
+        action="store_true",
+        help="Do not link proxy quantification files into sample raw_prog_results directories.",
     )
 
 
@@ -142,6 +148,7 @@ def load_actions(
     repo_root: Path,
     dataset_names: set[str] | None,
     regimes: set[str] | None,
+    skip_raw_proxy_quants: bool,
 ) -> list[LinkAction]:
     actions: set[LinkAction] = set()
     for dataset_dir in selected_dataset_dirs(inventory_dir, dataset_names):
@@ -173,6 +180,16 @@ def load_actions(
                         role=row["role"],
                     )
                 )
+                if not skip_raw_proxy_quants and is_proxy_quant(row):
+                    actions.add(
+                        LinkAction(
+                            source=source,
+                            dest=target_raw_prog_results_dir(repo_root, row) / rel_path.name,
+                            dataset=row["target_dataset"],
+                            regime=regime,
+                            role=f"{row['role']}:raw_proxy_quant",
+                        )
+                    )
 
     return sorted(actions)
 
@@ -191,6 +208,29 @@ def target_reference_dir(repo_root: Path, row: dict[str, str]) -> Path:
     if dataset == "MORFs":
         return repo_root / regime_dir / dataset / row["sample"] / "reference_data"
     return repo_root / regime_dir / dataset / "reference_data"
+
+
+def target_raw_prog_results_dir(repo_root: Path, row: dict[str, str]) -> Path:
+    regime_dir = REGIME_DIRS[row["regime"]]
+    dataset = row["target_dataset"]
+    base_dir = repo_root / regime_dir / dataset
+
+    if dataset == "MORFs":
+        sample_dir = base_dir / row["sample"]
+    elif row.get("subdataset"):
+        sample_dir = base_dir / row["subdataset"] / row["sample"]
+    else:
+        sample_dir = base_dir / row["sample"]
+
+    return sample_dir / "raw_prog_results"
+
+
+def is_proxy_quant(row: dict[str, str]) -> bool:
+    return (
+        row.get("reference_category") == "proxy-quant"
+        and row.get("input_type") == "quantification"
+        and row.get("file_type") == "file"
+    )
 
 
 def ensure_reference_payloads(args: argparse.Namespace) -> None:
@@ -329,7 +369,13 @@ def main() -> int:
     if args.command == "install":
         ensure_reference_payloads(args)
 
-    actions = load_actions(args.inventory_dir, args.repo_root, dataset_names, regimes)
+    actions = load_actions(
+        args.inventory_dir,
+        args.repo_root,
+        dataset_names,
+        regimes,
+        args.skip_raw_proxy_quants,
+    )
     stats = apply_actions(actions, args)
     print_summary(stats)
 
