@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+
+import sys, os, re
+import subprocess
+import argparse
+
+ESPRESSO_VERSION_TOKEN = "v1.6.0"
+
+
+def main():
+
+    parser = argparse.ArgumentParser(
+        description="__add_descr__",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument("--output_prefix", required=True, help="output file prefix")
+    parser.add_argument("--genome", type=str, required=True, help="genome fasta file")
+    parser.add_argument("--gtf", type=str, required=False, help="input gtf file")
+    parser.add_argument(
+        "--bam", type=str, required=True, help="input bam alignment file"
+    )
+    parser.add_argument(
+        "--ncpu", type=int, required=False, default=4, help="num threads"
+    )
+    parser.add_argument(
+        "--sort_buffer_memGB",
+        type=int,
+        required=False,
+        default=10,
+        help="sort memory in GB",
+    )
+    args = parser.parse_args()
+
+    output_prefix = args.output_prefix
+    genome_fasta = args.genome
+    gtf_file = args.gtf
+    bam_file = args.bam
+    sort_buffer_memGB = args.sort_buffer_memGB
+    num_threads = args.ncpu
+
+    # prep inputs
+    run_cmd(f"samtools view -o {output_prefix}.sam {bam_file}")
+
+    samples_file = f"espresso_samples.tsv"
+    with open(samples_file, "wt") as ofh:
+        print("\t".join([f"{output_prefix}.sam", "espresso"]), file=ofh)
+
+    annotation_args = [f"-A {gtf_file}"] if gtf_file else []
+    denovo_s_args = [] if gtf_file else ["--alignment_read_groups"]
+
+    # run espresso S
+    cmd = " ".join(
+        [
+        "perl /opt/conda/envs/espresso_env/bin/ESPRESSO_S.pl",
+        "--sort_buffer_size {}".format(sort_buffer_memGB),
+        f"-L {samples_file}",
+        f"-F {genome_fasta}",
+        *annotation_args,
+        *denovo_s_args,
+        "-O . ",
+        f"-T {num_threads}",
+        ]
+    )
+    run_cmd(cmd)
+
+    # run espresso C
+    cmd = " ".join(
+        [
+            "perl /opt/conda/envs/espresso_env/bin/ESPRESSO_C.pl",
+            f"--sort_buffer_size {sort_buffer_memGB}",
+            "-I .",
+            f"-F {genome_fasta}",
+            "-X 0",
+            f"-T {num_threads}",
+        ]
+    )
+    run_cmd(cmd)
+
+    # run espresso Q
+    cmd = " ".join(
+        [
+        "perl /opt/conda/envs/espresso_env/bin/ESPRESSO_Q.pl",
+        f"-L {samples_file}.updated",
+        *annotation_args,
+        f"-T {num_threads}",
+        ]
+    )
+    run_cmd(cmd)
+
+    run_cmd(
+        f"cp espresso_samples_N2_R0_updated.gtf "
+        f"{output_prefix}.espresso.{ESPRESSO_VERSION_TOKEN}.gtf"
+    )
+    run_cmd(
+        f"cp espresso_samples_N2_R0_abundance.esp "
+        f"{output_prefix}.espresso.{ESPRESSO_VERSION_TOKEN}.counts.tsv"
+    )
+
+    sys.exit(0)
+
+
+def run_cmd(cmd):
+
+    print("CMD: " + cmd, file=sys.stderr)
+    subprocess.check_call(cmd, shell=True)
+
+    return
+
+
+if __name__ == "__main__":
+    main()

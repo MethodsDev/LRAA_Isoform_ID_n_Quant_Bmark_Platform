@@ -1,0 +1,79 @@
+version 1.0
+
+task stringtieTask {
+    input {
+        String sample_id
+        File inputBAM
+        File inputBAMIndex
+        File referenceGenomeFasta
+        File referenceGenomeIndex
+        File? referenceAnnotationGTF
+        Boolean quant_only
+        
+        Int cpu = 4
+        Int numThreads = 8
+        Int memoryGB = 64
+        Int diskSizeGB = 250
+        String docker = "us-central1-docker.pkg.dev/methods-dev-lab/iso-reconstruct-benchmark/stringtie"
+        String stringtie_version_tag = "v3.0.3"
+    }
+
+    String quant_only_flag = if (quant_only) then "--quant_only" else ""
+
+    String stringtie_mode = if (quant_only) then "quant_only" else if (defined(referenceAnnotationGTF)) then "ref-guided" else "ref-free"
+    
+    command <<<
+
+        set -ex
+
+        stringtie-runner.py --genome ~{referenceGenomeFasta} \
+                            --bam ~{inputBAM} \
+                            ~{"--gtf " + referenceAnnotationGTF} \
+                            ~{quant_only_flag} \
+                            --stringtie_version_tag ~{stringtie_version_tag} \
+                            --output_prefix ~{sample_id}.~{stringtie_mode}
+
+    >>>
+    
+    output {
+
+        File stringtie_gtf = "~{sample_id}.~{stringtie_mode}.stringtie-~{stringtie_version_tag}.stringtie.gtf"
+        File stringtie_quant = "~{sample_id}.~{stringtie_mode}.stringtie-~{stringtie_version_tag}.stringtie.quant.tsv"
+    }
+
+    runtime {
+        cpu: "~{cpu}"
+        memory: "~{memoryGB} GiB"
+        disks: "local-disk ~{diskSizeGB} HDD"
+        docker: docker
+        errorStrategy: "Continue"
+    }
+}
+
+workflow stringtieWorkflow {
+    input {
+        String sample_id
+        File inputBAM
+        File inputBAMIndex
+        File referenceGenomeFasta
+        File referenceGenomeIndex
+        File? referenceAnnotationGTF
+        Boolean quant_only
+    }
+
+    call stringtieTask {
+        input:
+            sample_id = sample_id,
+            inputBAM = inputBAM,
+            inputBAMIndex = inputBAMIndex,
+            referenceGenomeFasta = referenceGenomeFasta,
+            referenceGenomeIndex = referenceGenomeIndex,
+            referenceAnnotationGTF = referenceAnnotationGTF,
+            quant_only = quant_only
+    }
+
+    output {
+        File stringtie_gtf = stringtieTask.stringtie_gtf
+        File stringtie_quant = stringtieTask.stringtie_quant
+    }
+}

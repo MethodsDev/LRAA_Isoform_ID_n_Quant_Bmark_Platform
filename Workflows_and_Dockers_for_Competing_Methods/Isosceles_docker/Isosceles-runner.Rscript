@@ -1,0 +1,150 @@
+#!/usr/bin/env Rscript
+
+#options(echo=TRUE) 
+
+suppressMessages({
+    library(tidyverse)
+    library(glue)
+    library(Isosceles)
+    library(argparse)
+})
+
+# Set the number of CPUs/threads for the analysis
+
+
+# Define command line options
+parser = ArgumentParser()
+
+parser$add_argument(c("--bam"), type = "character", default = NULL, help = "Path to BAM file", metavar = "character", required=TRUE)
+parser$add_argument(c("--gtf"), type = "character", default = NULL, help = "Path to GTF file", metavar = "character", required=TRUE)
+parser$add_argument(c("--genome"), type = "character", default = NULL, help = "Path to genome FASTA file", metavar = "character", required=TRUE)
+parser$add_argument(c("--output_prefix"), type = "character", default = NULL, help = "output file prefix", metavar = "character", required=TRUE)
+parser$add_argument(c("--quant_only"), action='store_true', default=FALSE, help="just perform quant only, no novel discovery")
+parser$add_argument(c("--ncpu"), type="integer", default=1, help="number of threads")
+
+
+# Parse command line options
+args = parser$parse_args()
+
+bam_file = args$bam
+gtf_file = args$gtf
+genome_fasta_file = args$genome
+output_prefix = args$output_prefix
+quant_only_mode = args$quant_only
+ncpu = args$ncpu
+
+######################
+# Prep transcript data
+
+names(bam_file) = 'sample_id'
+
+min_intron_length <- 30
+max_intron_length <- 5e6
+known_intron_motifs <- c("GT-AG")
+rescue_annotated_introns <- TRUE
+min_bam_splice_read_count <- 2
+min_bam_splice_fraction <- 0.1
+bin_size <- 50
+
+message("Parsing bam file: ", bam_file)
+bam_parsed <- bam_to_read_structures(bam_file)
+
+transcript_data <- prepare_transcripts(
+    gtf_file = gtf_file,
+    genome_fasta_file = genome_fasta_file,
+    bam_parsed = bam_parsed,
+    min_intron_length = min_intron_length,
+    max_intron_length = max_intron_length,
+    known_intron_motifs = known_intron_motifs,
+    rescue_annotated_introns = rescue_annotated_introns,
+    known_intron_granges = NULL,
+    min_bam_splice_read_count = min_bam_splice_read_count,
+    min_bam_splice_fraction = min_bam_splice_fraction,
+    bin_size = bin_size
+)
+
+
+###############################
+# Preparing the TCC SE objects
+
+min_read_count <- 1
+min_relative_expression <- 0
+extend_spliced_transcripts <- 100
+chunk_size <- 1000000
+
+if (quant_only_mode) {
+   run_mode <- "strict" 
+} else {
+   run_mode <- "de_novo_loose" 
+}
+
+message("Preparing bam_to_tcc under mode: ", run_mode)
+
+se_tcc <- bam_to_tcc(
+    bam_files = bam_file,
+    transcript_data = transcript_data,
+    run_mode = run_mode,
+    min_read_count = min_read_count,
+    min_relative_expression = min_relative_expression,
+    extend_spliced_transcripts = extend_spliced_transcripts,
+    chunk_size = chunk_size,
+    ncpu = ncpu
+)
+
+
+#######
+# Quant
+
+em.maxiter <- 250
+em.conv <- 0.01
+use_length_normalization <- TRUE
+
+message("Running quant")
+
+se_transcript <- tcc_to_transcript(
+    se_tcc = se_tcc,
+    em.maxiter = em.maxiter,
+    em.conv = em.conv,
+    use_length_normalization = use_length_normalization,
+    ncpu = ncpu
+)
+
+
+##########################
+# Write quants output file
+
+
+if (quant_only_mode) {
+   quants_outfile = paste0(output_prefix, ".isosceles.counts")
+} else {
+   quants_outfile = paste0(output_prefix, ".isosceles.refguided_novel_ID.counts")
+}              
+
+message("writing quants file: ", quants_outfile)
+
+counts = assay(se_transcript, "counts")
+counts <- as.data.frame(counts)
+colnames(counts) = ("count")
+
+counts <- counts %>%
+    rownames_to_column(var = "transcript_id") %>%
+    select(transcript_id, count)
+
+write.table(counts, file=quants_outfile, row.names=F, sep="\t", quote=F)
+
+
+########################
+# Write gtf if not quant-only-mode
+
+if (quant_only_mode) {
+   output_gtf_filename = paste0(output_prefix, ".isosceles.gtf")
+} else {
+   output_gtf_filename = paste0(output_prefix, ".isosceles.refguided_novel_ID.gtf")
+}
+
+message("writing GTF: ", output_gtf_filename)
+export_gtf(se_transcript, output_gtf_filename)
+
+
+message("done.")
+quit(save = "no", status = 0, runLast = FALSE)
