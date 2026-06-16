@@ -41,7 +41,7 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 ```{r}
 # define ranking
 
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=prog_ranking)
 
@@ -97,8 +97,8 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
-    slice(1) %>%
+    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -147,7 +147,7 @@ ggsave(pacbio_only_plot, file="pacbio_only.summary.pdf", width=6, height=6)
 
 pacbio_only_df =  df %>% filter(grepl("pacbio", data_name)) 
 
-pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
+pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% 
   pull(Program)
 
 pacbio_only_df$Program = factor(pacbio_only_df$Program, levels=pacbio_only_rankings)
@@ -185,7 +185,7 @@ pacbio_only_plot
 
 ONT_only_df =  df %>% filter(grepl("ont_", data_name)) 
 
-ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
+ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% 
   pull(Program)
 
 ONT_only_df$Program = factor(ONT_only_df$Program, levels=ONT_only_rankings)
@@ -265,7 +265,7 @@ latest_pacbio_only_df = df %>%
 
 latest_pacbio_only_rankings = latest_pacbio_only_df %>%
   filter(Metric == "F1") %>%
-  arrange(desc(Value)) %>%
+  arrange(dplyr::desc(Value)) %>%
   pull(Program)
 
 latest_pacbio_only_df$Program = factor(latest_pacbio_only_df$Program,
@@ -277,7 +277,7 @@ latest_ONT_only_df = df %>%
 
 latest_ONT_only_rankings = latest_ONT_only_df %>%
   filter(Metric == "F1") %>%
-  arrange(desc(Value)) %>%
+  arrange(dplyr::desc(Value)) %>%
   pull(Program)
 
 latest_ONT_only_df$Program = factor(latest_ONT_only_df$Program,

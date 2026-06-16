@@ -62,8 +62,8 @@ get_latest_methods = function(methods) {
   latest_versioned = method_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
-    slice(1) %>%
+    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   unversioned = method_versions %>%

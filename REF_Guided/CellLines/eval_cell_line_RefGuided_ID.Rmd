@@ -56,7 +56,7 @@ df %>% head()
 ```{r}
 
 prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
-  summarize(mean_F1 = mean(Val)) %>% arrange(desc(mean_F1)) %>% pull(Tool)
+  summarize(mean_F1 = mean(Val)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Tool)
 
 
 df$Tool = factor(df$Tool, levels=prog_ranking)
@@ -91,8 +91,8 @@ get_latest_tools = function(data_df) {
   latest_versioned_tools = tool_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool_Base) %>%
-    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
-    slice(1) %>%
+    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   unversioned_tools = tool_versions %>%
@@ -151,7 +151,7 @@ mean_df %>% head()
 
 BT474_df = mean_df %>% filter(cell_line == "BT474")
 
-BT474_rankings = BT474_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
+BT474_rankings = BT474_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
 
 BT474_df$Tool = factor(BT474_df$Tool, levels=BT474_rankings)
 
@@ -170,7 +170,7 @@ BT474_df_ranked_plot
 
 K562_df = mean_df %>% filter(cell_line == "K562")
 
-K562_rankings = K562_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
+K562_rankings = K562_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
 
 K562_df$Tool = factor(K562_df$Tool, levels=K562_rankings)
 
@@ -191,7 +191,7 @@ K562_df_ranked_plot
 
   HG002_df = mean_df %>% filter(cell_line == "HG002")
   
-  HG002_rankings = HG002_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
+  HG002_rankings = HG002_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
   
   HG002_df$Tool = factor(HG002_df$Tool, levels=HG002_rankings)
   
@@ -212,7 +212,7 @@ K562_df_ranked_plot
 
 UHRR_df = mean_df %>% filter(cell_line == "UHRR")
 
-UHRR_rankings = UHRR_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
+UHRR_rankings = UHRR_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
 
 UHRR_df$Tool = factor(UHRR_df$Tool, levels=UHRR_rankings)
 
@@ -353,7 +353,7 @@ latest_BT474_df = latest_mean_df %>% filter(cell_line == "BT474")
 
 latest_BT474_rankings = latest_BT474_df %>%
   filter(Metric == "F1") %>%
-  arrange(desc(mean_val)) %>%
+  arrange(dplyr::desc(mean_val)) %>%
   pull(Tool)
 
 latest_BT474_df$Tool = factor(latest_BT474_df$Tool, levels=latest_BT474_rankings)
@@ -362,7 +362,7 @@ latest_K562_df = latest_mean_df %>% filter(cell_line == "K562")
 
 latest_K562_rankings = latest_K562_df %>%
   filter(Metric == "F1") %>%
-  arrange(desc(mean_val)) %>%
+  arrange(dplyr::desc(mean_val)) %>%
   pull(Tool)
 
 latest_K562_df$Tool = factor(latest_K562_df$Tool, levels=latest_K562_rankings)
@@ -371,7 +371,7 @@ latest_HG002_df = latest_mean_df %>% filter(cell_line == "HG002")
 
 latest_HG002_rankings = latest_HG002_df %>%
   filter(Metric == "F1") %>%
-  arrange(desc(mean_val)) %>%
+  arrange(dplyr::desc(mean_val)) %>%
   pull(Tool)
 
 latest_HG002_df$Tool = factor(latest_HG002_df$Tool, levels=latest_HG002_rankings)
@@ -380,7 +380,7 @@ latest_UHRR_df = latest_mean_df %>% filter(cell_line == "UHRR")
 
 latest_UHRR_rankings = latest_UHRR_df %>%
   filter(Metric == "F1") %>%
-  arrange(desc(mean_val)) %>%
+  arrange(dplyr::desc(mean_val)) %>%
   pull(Tool)
 
 latest_UHRR_df$Tool = factor(latest_UHRR_df$Tool, levels=latest_UHRR_rankings)

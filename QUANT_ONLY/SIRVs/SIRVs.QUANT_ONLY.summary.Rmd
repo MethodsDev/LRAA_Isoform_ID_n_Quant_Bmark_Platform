@@ -32,7 +32,7 @@ SIRVs_pearson_cor_df %>% head()
 # rank according to mean cor val
 pearson_cor_df_ranking = SIRVs_pearson_cor_df %>% 
   filter(sirv_set != "E0") %>%
-  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
 
 
 SIRVs_pearson_cor_df$name = factor(SIRVs_pearson_cor_df$name, levels=pearson_cor_df_ranking)
@@ -75,7 +75,7 @@ SIRVs_spearman_cor_df %>% head()
 # rank according to mean cor val
 spearman_cor_df_ranking = SIRVs_spearman_cor_df %>% 
   filter(sirv_set != "E0") %>%
-  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
+  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
 
 
 SIRVs_spearman_cor_df$name = factor(SIRVs_spearman_cor_df$name, levels=pearson_cor_df_ranking)
@@ -234,8 +234,8 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
-    slice(1) %>%
+    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -544,7 +544,7 @@ if (nrow(SIRVs_oarfish_metrics_long) > 0) {
     mutate(
       metric_rank = if_else(
         direction == "higher is better",
-        min_rank(desc(metric_value)),
+        min_rank(dplyr::desc(metric_value)),
         min_rank(metric_value)
       )
     ) %>%

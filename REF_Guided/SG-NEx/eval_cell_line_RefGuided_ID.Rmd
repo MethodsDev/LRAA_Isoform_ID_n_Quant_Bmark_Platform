@@ -54,7 +54,7 @@ df %>% head()
 ```{r}
 
 prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
-  summarize(mean_F1 = mean(Val)) %>% arrange(desc(mean_F1)) %>% pull(Tool)
+  summarize(mean_F1 = mean(Val)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Tool)
 
 
 df$Tool = factor(df$Tool, levels=prog_ranking)
@@ -86,8 +86,8 @@ get_latest_tools = function(data_df) {
   latest_versioned_tools = tool_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool_Base) %>%
-    arrange(desc(numeric_version(Version)), .by_group = TRUE) %>%
-    slice(1) %>%
+    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
+    dplyr::slice(1) %>%
     ungroup()
 
   unversioned_tools = tool_versions %>%
@@ -167,7 +167,7 @@ get_ranked_tile_plot = function(cell_line_val, data_df = df) {
     filter(Metric == "F1") %>% 
     group_by(Tool) %>%
     summarize(mean_F1 = mean(Val)) %>%
-    arrange(desc(mean_F1)) %>% 
+    arrange(dplyr::desc(mean_F1)) %>% 
     pull(Tool)
   
   ranked_df$Tool = factor(ranked_df$Tool, levels=ranked_progs)
