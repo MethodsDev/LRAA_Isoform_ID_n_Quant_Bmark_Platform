@@ -55,9 +55,28 @@ def processGtf(gtf):
     add a column that shows the next row's transcript ID.
     """
     print("-processGtf( {} )\n".format(gtf))
-    df_polar = read_gtf(gtf)
-    df = pd.DataFrame(df_polar)
-    df.columns = df_polar.columns
+    try:
+        df_polar = read_gtf(gtf)
+        df = pd.DataFrame(df_polar)
+        df.columns = df_polar.columns
+    except Exception as exc:
+        # gtfparse 2.5 pins polars < 0.21.  In shared environments a newer
+        # Polars can be present (for example through MultiQC), and its CSV
+        # reader may interpret quotes in the ninth GTF column as CSV quoting:
+        #
+        #   ComputeError: CSV malformed: expected ... rows, actual ... rows
+        #
+        # GTF is tab-delimited and quotes have no CSV semantics.  Fall back to
+        # a small pandas reader that disables quote handling and extracts only
+        # the two attributes used by the benchmarking code.  Do not mask
+        # unrelated parser or input errors.
+        if "CSV malformed" not in str(exc):
+            raise
+        print(
+            "gtfparse/Polars CSV quote parsing failed; "
+            "retrying with the GTF-compatible parser"
+        )
+        df = _read_gtf_without_csv_quoting(gtf)
     df = df[df["feature"] == "exon"]
     # print(df.head())
 
@@ -68,6 +87,48 @@ def processGtf(gtf):
     df_exons = df_exons.astype({"next_transcript": str})
 
     return df_exons
+
+
+def _read_gtf_without_csv_quoting(gtf):
+    """Read the GTF fields needed by this module without CSV quote rules."""
+    columns = [
+        "seqname",
+        "source",
+        "feature",
+        "start",
+        "end",
+        "score",
+        "strand",
+        "frame",
+        "attribute",
+    ]
+    df = pd.read_csv(
+        gtf,
+        sep="\t",
+        comment="#",
+        header=None,
+        names=columns,
+        usecols=["seqname", "feature", "start", "end", "strand", "attribute"],
+        quoting=csv.QUOTE_NONE,
+        dtype={
+            "seqname": str,
+            "feature": str,
+            "start": "int64",
+            "end": "int64",
+            "strand": str,
+            "attribute": str,
+        },
+    )
+
+    # GTF attributes are semicolon-separated key/value pairs.  Values are
+    # conventionally quoted, but accepting unquoted values costs nothing and
+    # makes the fallback useful for otherwise-valid producer variants.
+    for attribute_name in ("transcript_id", "gene_id"):
+        df[attribute_name] = df["attribute"].str.extract(
+            rf"(?:^|;\s*){attribute_name}\s+[\"']?([^;\"']+?)[\"']?\s*(?:;|$)",
+            expand=False,
+        )
+    return df.drop(columns="attribute")
 
 
 def intronIds(df, include_strand=True):

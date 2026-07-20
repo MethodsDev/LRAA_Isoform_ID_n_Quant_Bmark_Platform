@@ -9,17 +9,29 @@ for the three benchmark regimes:
 - `REF_Guided/`: reference-guided isoform identification benchmarking
 
 Input files and generated benchmark outputs are intentionally not tracked here.
-Place externally hosted inputs into each dataset's `reference_data/` directory
-and each sample's `raw_prog_results/` directory before running.
+Reference inputs and deposited comparator predictions are published in
+[Zenodo record 20719930](https://zenodo.org/records/20719930) and can be
+installed directly with:
 
-Reference files can be symlinked from the paper analysis inventory with:
-
-```bash
-python3 scripts/install_references.py link
+```console
+make install-inputs
 ```
 
-Proxy Oarfish quantification files are also linked into the corresponding
-sample `raw_prog_results/` directories.
+The installers download and verify the reference and prediction archives,
+unpack them under `.benchmark_inputs/`, and create the required symlinks.
+Downloads are cached and partial downloads resume on the next run. Existing
+non-matching files in `raw_prog_results/` are never replaced unless `--force`
+is explicitly passed to `scripts/install_predictions.py`.
+
+To install only one dataset (useful because several archives are large), run:
+
+```console
+python3 scripts/install_references.py --dataset SIRVs install
+```
+
+Use `make install-references` or `make install-predictions` when only one input
+class is needed. Prediction regimes can also be selected individually, for
+example `python3 scripts/install_predictions.py --regime QUANT_ONLY`.
 
 ## Layout
 
@@ -36,10 +48,19 @@ Each regime has a `tool_registry.yaml`, a top-level `Makefile`, per-dataset
 
 ## Basic Usage
 
-Install the Python dependencies, then populate the required external inputs:
+Install the Python dependencies and benchmark inputs:
 
-```bash
+```console
 python3 -m pip install -r requirements.txt
+make install-inputs
+```
+
+Run all three benchmark regimes and build their aggregate result tables from
+the repository root:
+
+```console
+make
+make summarize
 ```
 
 Run a full regime:

@@ -4,6 +4,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # External input payloads
+.benchmark_inputs/
 **/raw_prog_results/*
 !**/raw_prog_results/.gitkeep
 **/processed_prog_results/*
@@ -31,10 +32,13 @@ __pycache__/
 *.html
 *.log
 *.files.list
+cluster_assignments.csv
+correlation_matrix.csv
+expression_matrix.csv
+cor_files.list
 bmark.ok
 script.log
 
 # Executed notebooks are generated in sample directories.
 *.ipynb
 !benchmarking/template_notebooks/*.ipynb
-

@@ -468,6 +468,13 @@ against it.
   (`(cd a && make) & (cd b && make) &`), the global parallelism is
   6 x N_families. On a 64 GB host that's fine for ~4 families.
 
+- **`gtfparse` and modern Polars**: `gtfparse` 2.5 requires Polars `<0.21`,
+  while shared analysis environments may install a newer Polars for other
+  tools. Newer Polars can report `CSV malformed` while interpreting quotes in
+  a large GTF attribute column. `BenchmarkingRoutines.processGtf` catches only
+  that parser error and retries with CSV quote handling disabled. A fresh
+  environment installed from `requirements.txt` remains the preferred setup.
+
 - **Stale Docker images**: WDL workflows pin `:latest`. After updating a
   tool's runner script, rebuild + push the docker image (each docker dir
   has `build_docker.sh` and `push_docker.sh`) before invoking the WDL
