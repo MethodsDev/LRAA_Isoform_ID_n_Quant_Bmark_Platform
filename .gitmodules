@@ -1,0 +1,6 @@
+[submodule "LRAA_paper-PBMCs_study"]
+	path = LRAA_paper-PBMCs_study
+	url = https://github.com/MethodsDev/LRAA_paper-PBMCs_study.git
+[submodule "LRAA_paper-FTD_study"]
+	path = LRAA_paper-FTD_study
+	url = https://github.com/MethodsDev/LRAA_paper-FTD_study.git
