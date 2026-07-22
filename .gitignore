@@ -28,6 +28,18 @@ __pycache__/
 *.bam
 *.bai
 *.pdf
+# Publish the paper-facing benchmark PDFs linked from the README.
+!QUANT_ONLY/*/*summary*.latest_tools.pdf
+!DENOVO_ID/*/*summary*.latest_tools.pdf
+!REF_Guided/*/*summary*.latest_tools.pdf
+!DENOVO_ID/*/*_F1_by_error_rate.latest_tools.pdf
+!REF_Guided/*/*_F1_by_error_rate.latest_tools.pdf
+!QUANT_ONLY/MORFs/combined_morf_quant_plot.latest_tools.pdf
+!QUANT_ONLY/SG-NEx/SGNex_expr_cor_plot.latest_tools.pdf
+!DENOVO_ID/MORFs/combined_morf_denovo_plot.latest_tools.pdf
+!DENOVO_ID/SG-NEx/SG-NEx_cell_lines_denovo_stacked.latest_tools.pdf
+!REF_Guided/MORFs/MORFs_refGuided_plot.latest_tools.pdf
+!REF_Guided/SG-NEx/SG-NEx_cell_lines_stacked.latest_tools.pdf
 *.png
 # Keep figures referenced by rendered GitHub documents trackable.
 !**/*_files/figure-gfm/*.png
