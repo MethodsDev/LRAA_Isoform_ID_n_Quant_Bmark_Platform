@@ -141,7 +141,7 @@ pacbio_only_plot = pacbio_only_df %>%
   theme_bw() +
   facet_wrap(~Metric, ncol=1) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio")
+  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - PacBio")
 
 
 pacbio_only_plot
@@ -171,7 +171,7 @@ ONT_only_plot = ONT_only_df %>%
   theme_bw() +
   facet_wrap(~Metric, ncol=1) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT")
+  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - ONT")
 
 
 ONT_only_plot
@@ -207,7 +207,7 @@ pacbio_only_plot = pacbio_only_df %>%
   #scale_fill_gradient(limits = c(0, 1), low = "white", high = "steelblue") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio") +
+  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - PacBio") +
   labs(x = "Program", y = "Metric")
 ```
 
@@ -228,7 +228,7 @@ ONT_only_plot = ONT_only_df %>%
   #scale_fill_gradient(limits = c(0, 1), low = "white", high = "steelblue") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT") +
+  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - ONT") +
   labs(x = "Program", y = "Metric")
 
 MORFs_refGuided_plot = grid.arrange(pacbio_only_plot, ONT_only_plot, ncol = 1)
@@ -281,7 +281,7 @@ latest_pacbio_only_plot = latest_pacbio_only_df %>%
             color = "white") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio - Latest Tools") +
+  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - PacBio - Latest Tools") +
   labs(x = "Program", y = "Metric")
 
 latest_ONT_only_plot = latest_ONT_only_df %>%
@@ -293,7 +293,7 @@ latest_ONT_only_plot = latest_ONT_only_df %>%
             color = "white") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT - Latest Tools") +
+  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - ONT - Latest Tools") +
   labs(x = "Program", y = "Metric")
 
 latest_MORFs_refGuided_plot = grid.arrange(latest_pacbio_only_plot,
