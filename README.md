@@ -55,13 +55,16 @@ python3 -m pip install -r requirements.txt
 make install-inputs
 ```
 
-Run all three benchmark regimes and build their aggregate result tables from
-the repository root:
+Run all three benchmark regimes, build their aggregate result tables, and knit
+the 18 dataset summary reports as GitHub documents from the repository root:
 
 ```console
 make
 make summarize
 ```
+
+To re-knit the reports without regenerating the aggregate tables, run
+`make render-reports`.
 
 Run a full regime:
 

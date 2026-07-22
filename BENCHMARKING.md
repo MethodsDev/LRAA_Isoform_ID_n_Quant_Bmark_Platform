@@ -376,22 +376,25 @@ should be 100%.
 
 ### Step 4: Re-run
 
-```
-cd <regime>
-make clean   # wipes processed_prog_results, bmark.ok, generated notebooks
-make         # rebuilds; failures surface via the report target
-make summarize  # regenerates aggregated TSVs and rerenders summary plots
-```
-
-### Step 5: Re-render the Rmd reports (optional)
-
-Per-dataset Rmd reports live alongside the aggregated TSVs:
+From the repository root:
 
 ```
-cd <regime>/CellLines
-Rscript -e 'rmarkdown::render("eval_cell_line_RefGuided_ID.Rmd",
-                              output_format="github_document")'
+make -C <regime> clean  # wipes processed_prog_results, bmark.ok, generated notebooks
+make -C <regime>        # rebuilds; failures surface via the report target
+make summarize          # regenerates all aggregate TSVs, then knits summary reports
 ```
+
+### Step 5: Re-render the Rmd reports without re-aggregating (optional)
+
+The root target renders all 18 dataset summary Rmds from their own directories,
+so their relative paths resolve correctly:
+
+```
+make render-reports
+```
+
+Each report declares `output: github_document` and is written beside its Rmd
+with the same basename and a `.md` extension.
 
 The Rmds consume long-format aggregated TSVs (with a `Name` cell-value
 column), so new tool entries appear automatically without Rmd edits. One

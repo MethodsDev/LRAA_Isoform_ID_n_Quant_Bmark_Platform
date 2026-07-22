@@ -29,6 +29,8 @@ __pycache__/
 *.bai
 *.pdf
 *.png
+# Keep figures referenced by rendered GitHub documents trackable.
+!**/*_files/figure-gfm/*.png
 *.html
 *.log
 *.files.list
