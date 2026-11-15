@@ -61,3 +61,10 @@ script.log
 !supp_analyses/**
 !supp_tables/**
 !data_generation/**
+
+# Executed copies of the proteoform notebook (make -C supp_analyses/proteoforms notebook)
+*.executed.ipynb
+# ...except their knit side outputs and the proteoform notebook's working results
+supp_analyses/**/*.html
+supp_analyses/**/Rplots.pdf
+supp_analyses/proteoforms/*_proteoform_analysis_results/

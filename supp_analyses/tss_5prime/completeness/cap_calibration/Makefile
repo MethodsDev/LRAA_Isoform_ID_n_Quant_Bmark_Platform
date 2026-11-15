@@ -65,8 +65,8 @@ out/%.peaks.tsv.gz: scripts/export_peaks.py
 		$$( [ "$$cage" != "-" ] && echo --cage $$cage ) > logs/$*.log 2>&1
 
 # the current version's high-confidence TSS switch pairs: Supplementary Figure TSS-5' panel e (since 2026-11-11)
-EV_FTD := ../../LRAA_paper-FTD_study/__Site_Usage_Analysis/LP00714.TSS_events_vs_CAGE.events.tsv
-EV_PBMC := ../../LRAA_paper-PBMCs_study/__Site_Usage_Analysis/PBMCs.TSS_events_vs_CAGE.events.tsv
+EV_FTD := ../../../../LRAA_paper-FTD_study/__Site_Usage_Analysis/LP00714.TSS_events_vs_CAGE.events.tsv
+EV_PBMC := ../../../../LRAA_paper-PBMCs_study/__Site_Usage_Analysis/PBMCs.TSS_events_vs_CAGE.events.tsv
 ext/%_current_TSS_event_pairs.tsv: scripts/current_event_pairs.py
 	python3 scripts/current_event_pairs.py $(EV_$*) $@
 out/%.current_event_site_caprates.tsv: scripts/event_site_caprates.py ext/%_current_TSS_event_pairs.tsv

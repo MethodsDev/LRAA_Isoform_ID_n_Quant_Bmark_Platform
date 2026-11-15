@@ -1,0 +1,110 @@
+dataset	measure	value
+ALS	tier_all	931
+ALS	tier_pile-up+cap	69
+ALS	tier_core: pile-up+cap+atlas	60
+ALS	tier_core, not canonical TSS	26
+ALS	tier_core, protein altered	5
+ALS	tier_core, N-truncated	4
+BT474	tier_all	251
+BT474	tier_pile-up+cap	87
+BT474	tier_core: pile-up+cap+atlas	78
+BT474	tier_core, not canonical TSS	53
+BT474	tier_core, protein altered	13
+BT474	tier_core, N-truncated	7
+HG002	tier_all	324
+HG002	tier_pile-up+cap	69
+HG002	tier_core: pile-up+cap+atlas	61
+HG002	tier_core, not canonical TSS	38
+HG002	tier_core, protein altered	10
+HG002	tier_core, N-truncated	7
+K562	tier_all	237
+K562	tier_pile-up+cap	53
+K562	tier_core: pile-up+cap+atlas	50
+K562	tier_core, not canonical TSS	30
+K562	tier_core, protein altered	9
+K562	tier_core, N-truncated	7
+PBMC	tier_all	679
+PBMC	tier_pile-up+cap	156
+PBMC	tier_core: pile-up+cap+atlas	132
+PBMC	tier_core, not canonical TSS	64
+PBMC	tier_core, protein altered	21
+PBMC	tier_core, N-truncated	15
+UHRR	tier_all	257
+UHRR	tier_pile-up+cap	81
+UHRR	tier_core: pile-up+cap+atlas	80
+UHRR	tier_core, not canonical TSS	47
+UHRR	tier_core, protein altered	12
+UHRR	tier_core, N-truncated	10
+bulk	own_ism_isoforms_Bambu	9177
+bulk	own_ism_isoforms_ESPRESSO	5843
+bulk	own_ism_isoforms_IsoQuant	160
+bulk	own_ism_isoforms_IsoSeq	773644
+bulk	own_ism_isoforms_LRAA	2844
+bulk	own_ism_isoforms_Mandalorion	9238
+bulk	own_ism_isoforms_StringTie	1151
+bulk	own_ism_supported_Bambu	57
+bulk	own_ism_supported_ESPRESSO	22
+bulk	own_ism_supported_IsoQuant	7
+bulk	own_ism_supported_IsoSeq	363
+bulk	own_ism_supported_LRAA	183
+bulk	own_ism_supported_Mandalorion	89
+bulk	own_ism_supported_StringTie	32
+bulk	own_ism_truncation_like_Bambu	271
+bulk	own_ism_truncation_like_ESPRESSO	64
+bulk	own_ism_truncation_like_IsoQuant	1
+bulk	own_ism_truncation_like_IsoSeq	6813
+bulk	own_ism_truncation_like_LRAA	82
+bulk	own_ism_truncation_like_Mandalorion	345
+bulk	own_ism_truncation_like_StringTie	15
+bulk	own_ism_pct_truncation_Bambu	82.6219512195122
+bulk	own_ism_pct_truncation_ESPRESSO	74.4186046511628
+bulk	own_ism_pct_truncation_IsoQuant	12.5
+bulk	own_ism_pct_truncation_IsoSeq	94.94147157190636
+bulk	own_ism_pct_truncation_LRAA	30.943396226415093
+bulk	own_ism_pct_truncation_Mandalorion	79.49308755760369
+bulk	own_ism_pct_truncation_StringTie	31.91489361702128
+ALS	cage10_Capped pile-up	0.9152542372881356
+ALS	cage10_Uncapped pile-up	0.05208333333333333
+BT474	cage10_Capped pile-up	0.8674698795180723
+HG002	cage10_Capped pile-up	0.8666666666666667
+HG002	cage10_Uncapped pile-up	0.1
+K562	cage10_Capped pile-up	0.9215686274509804
+K562	cage10_Uncapped pile-up	0
+PBMC	cage10_Capped pile-up	0.855072463768116
+PBMC	cage10_Uncapped pile-up	0.02857142857142857
+UHRR	cage10_Capped pile-up	0.9722222222222222
+UHRR	cage10_Uncapped pile-up	0
+ALS	cage10_bg_Capped pile-up	0.11016949152542373
+ALS	cage10_bg_Uncapped pile-up	0.04479166666666667
+BT474	cage10_bg_Capped pile-up	0.11325301204819276
+HG002	cage10_bg_Capped pile-up	0.12666666666666665
+HG002	cage10_bg_Uncapped pile-up	0.072
+K562	cage10_bg_Capped pile-up	0.09215686274509804
+K562	cage10_bg_Uncapped pile-up	0.04444444444444444
+PBMC	cage10_bg_Capped pile-up	0.127536231884058
+PBMC	cage10_bg_Uncapped pile-up	0.08857142857142858
+UHRR	cage10_bg_Capped pile-up	0.15
+UHRR	cage10_bg_Uncapped pile-up	0
+all	qualifying_pairs	205
+all	qualifying_peaks	47
+all	qualifying_genes	43
+COMT	aa_total	271
+RECQL4	aa_total	1208
+CORO1B	aa_total	489
+EPB41L3	aa_total	865
+COMT	aa_remaining	221
+RECQL4	aa_remaining	851
+CORO1B	aa_remaining	171
+EPB41L3	aa_remaining	318
+COMT	n_site	1193
+RECQL4	n_site	54
+CORO1B	n_site	339
+EPB41L3	n_site	15
+COMT	cap_pct	46.77284157585918
+RECQL4	cap_pct	85.18518518518519
+CORO1B	cap_pct	70.50147492625368
+EPB41L3	cap_pct	53.333333333333336
+EPB41L3	L_fsm_reads	1
+EPB41L3	S_fsm_reads	2
+EPB41L3	L_tss_reads	15
+EPB41L3	neuron_pct	0

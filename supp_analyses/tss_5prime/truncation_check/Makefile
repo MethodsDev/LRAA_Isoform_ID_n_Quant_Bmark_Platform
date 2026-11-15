@@ -7,7 +7,7 @@ LRAA_HOME ?= $(HOME)/LongReadAlignmentAssembler
 CTAT      := $(HOME)/CTAT_GENOME_LIBS/GRCh38_gencode_v22_CTAT_lib_Mar012021.plug-n-play/ctat_genome_lib_build_dir
 GTF       := $(CTAT)/ref_annot.gtf
 GENOME    := $(CTAT)/ref_genome.fa
-RDNA_MASK := ../../../__shared_refs/rdna_mask.GRCh38.bed
+RDNA_MASK := ../../../LRAA_paper-PBMCs_study/shared_refs/rdna_mask.GRCh38.bed
 GENES     := GAPDH,ACTB,RPL28,EEF1D,GPX4,OAZ1
 SCRIPT    := $(LRAA_HOME)/util/sc/read_end_profile_by_cluster.py
 

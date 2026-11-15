@@ -499,7 +499,7 @@ keeps.
 The FTD event pairs (`ext/`, the v0.45.0 high-confidence TSS switches where a neuron cluster
 favours the downstream site, before any cap rule): the downstream sites are 5' truncation
 products by every other measure (no CAGE support, neuron nuclei's short reads; see
-`../../LRAA_paper-FTD_study/__Site_Usage_Analysis`). Their capped fractions, from the same
+`../../../../LRAA_paper-FTD_study/__Site_Usage_Analysis`). Their capped fractions, from the same
 read rules:
 
 ```{r event_sites, fig.height = 4.5}

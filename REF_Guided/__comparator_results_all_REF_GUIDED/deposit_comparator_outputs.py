@@ -145,7 +145,7 @@ def _try_load_registry(explicit_path, base_project_out_dir):
     iso_pylib = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
-            "..", "..", benchmarking, "pylib",
+            "..", "..", "benchmarking", "pylib",
         )
     )
     if iso_pylib not in sys.path:

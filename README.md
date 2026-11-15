@@ -8,6 +8,11 @@ for the three benchmark regimes:
 - `DENOVO_ID/`: reference-free isoform identification benchmarking
 - `REF_Guided/`: reference-guided isoform identification benchmarking
 
+It also holds the paper's supplementary analyses and tables (`supp_analyses/`, `supp_tables/`), the
+notebooks that generated the SIRV, MORF and cell-line data (`data_generation/`), and the two single-cell
+studies as submodules (`LRAA_paper-PBMCs_study/`, `LRAA_paper-FTD_study/`). All LRAA results are from release
+**v0.51.0** (tag `LRAA_v0.51.0`); in the benchmarks LRAA is the registry entry `LRAA-v0.51.0`.
+
 External inputs and intermediate benchmark outputs are intentionally not tracked here.
 Reference inputs and deposited comparator predictions are published in
 [Zenodo record 20719930](https://zenodo.org/records/20719930) and can be
@@ -37,9 +42,15 @@ example `python3 scripts/install_predictions.py --regime QUANT_ONLY`.
 
 ```text
 benchmarking/                         shared Python runner, parsers, notebooks
-QUANT_ONLY/                   quantification-only regime
+QUANT_ONLY/                           quantification-only regime
 DENOVO_ID/                            de novo isoform ID regime
 REF_Guided/                           reference-guided isoform ID regime
+supp_analyses/                        supplementary analyses (5' completeness, ISM internal TSS, proteoforms,
+                                      site atlas, SQLIKE categories, DEXSeq null split)
+supp_tables/                          builders of the Supplementary Tables
+data_generation/                      notebooks that generated the SIRV, MORF and cell-line data
+LRAA_paper-PBMCs_study/               submodule: PBMC single-cell study
+LRAA_paper-FTD_study/                 submodule: FTD single-nucleus study
 ```
 
 Each regime has a `tool_registry.yaml`, a top-level `Makefile`, per-dataset
@@ -137,3 +148,52 @@ cd REF_Guided/arabidopsis_sim/arabidopsis_isoseqsim_e000
 
 See `BENCHMARKING.md` for the registry schema, run-script flags, and the
 benchmarking workflow.
+
+## Supplementary analyses and tables
+
+The supplementary analyses read the study submodules and the cross-dataset Zenodo bundle. With both in place,
+each report is knit from its own directory (`Rscript -e "rmarkdown::render('<report>.Rmd')"`) and each
+figure script runs there (`Rscript SuppFig_<name>.R`). The proteoform notebook runs with
+`make -C supp_analyses/proteoforms notebook REF_GTF=<GENCODE v47 GTF>`; its ORFs are in the bundle
+(`supp_analyses/proteoforms/orfs/`) and `run_orfs.sh` predicts them again. The Supplementary Tables are built
+by `python3 make_dexseq_supp_table.py` and `python3 make_ISM_supp_table.py` in `supp_tables/`.
+
+| Paper item | Panels | What | File(s) in this repo |
+|---|---|---|---|
+| Supplementary Figure 6 | a-d | image (rebuilt here) | `supp_analyses/categories/SuppFig_categories.pdf` |
+| Supplementary Figure 6 | a-d | generator | `supp_analyses/categories/SuppFig_categories.R` |
+| Supplementary Figure 7 | all | image (rebuilt here) | `supp_analyses/proteoforms/SuppFig_proteoforms_PBMC.pdf` |
+| Supplementary Figure 7 | all | generator (filtered) | `supp_analyses/proteoforms/LRAA_proteoform_analysis_PBMC_ALS_20260528.ipynb` |
+| Supplementary Figure 7 | all | generator | `supp_analyses/proteoforms/orf_settings.conf` |
+| Supplementary Figure 8 | all | image (rebuilt here) | `supp_analyses/proteoforms/SuppFig_proteoforms_FTD.pdf` |
+| Supplementary Figure 8 | all | generator (filtered) | `supp_analyses/proteoforms/LRAA_proteoform_analysis_PBMC_ALS_20260528.ipynb` |
+| Supplementary Figure 8 | all | generator | `supp_analyses/proteoforms/orf_settings.conf` |
+| Supplementary Figure 9 | a-c | image (rebuilt here) | `supp_analyses/site_atlas/SuppFig_site_atlas.pdf`<br>`supp_analyses/site_atlas/SuppFig_site_atlas.values.tsv` |
+| Supplementary Figure 9 | a-c | generator | `supp_analyses/site_atlas/SuppFig_site_atlas.R` |
+| Supplementary Figure 10 | a,c | report (rebuilt here) | `supp_analyses/tss_5prime/truncation_check/tss_truncation_check.md`<br>+ 5 knitr figure files |
+| Supplementary Figure 10 | a,c | generator | `supp_analyses/tss_5prime/truncation_check/Makefile`<br>`supp_analyses/tss_5prime/truncation_check/tss_truncation_check.Rmd` |
+| Supplementary Figure 10 | a-e | image (rebuilt here) | `supp_analyses/tss_5prime/SuppFig_TSS_5prime.pdf`<br>`supp_analyses/tss_5prime/SuppFig_TSS_5prime.values.tsv` |
+| Supplementary Figure 10 | a-e | generator | `supp_analyses/tss_5prime/SuppFig_TSS_5prime.R` |
+| Supplementary Figure 10 | b,d,e | report (rebuilt here) | `supp_analyses/tss_5prime/completeness/cap_calibration/cap_calibration.md`<br>`supp_analyses/tss_5prime/completeness/tss_5prime_completeness.md`<br>+ 14 knitr figure files |
+| Supplementary Figure 10 | b,d,e | generator | `supp_analyses/tss_5prime/completeness/` (15 files) |
+| Supplementary Figure 11 | a-g | image (rebuilt here) | `supp_analyses/ism_internal_tss/SuppFig_ISM_internal_TSS.pdf`<br>`supp_analyses/ism_internal_tss/SuppFig_ISM_internal_TSS.values.tsv` |
+| Supplementary Figure 11 | a-g | generator | `supp_analyses/ism_internal_tss/SuppFig_ISM_internal_TSS.R` |
+| Supplementary Figure 11 | - | report (rebuilt here) | `supp_analyses/ism_internal_tss/ISM_internal_TSS.md`<br>+ 18 knitr figure files |
+| Supplementary Figure 11 | - | generator | `supp_analyses/ism_internal_tss/` (22 files) |
+| Supplementary Table 1 | - | generator | `supp_tables/make_dexseq_supp_table.py` |
+| Supplementary Table 1 | - | table (rebuilt here) | `supp_tables/SuppTable1_differential_usage.xlsx`<br>`supp_tables/differential_usage_all_events.zip` |
+| Supplementary Table 2 | - | report (rebuilt here) | `supp_analyses/ism_internal_tss/ISM_internal_TSS.md`<br>+ 18 knitr figure files |
+| Supplementary Table 2 | - | generator | `supp_analyses/ism_internal_tss/` (22 files) |
+| Supplementary Table 2 | - | generator | `supp_tables/make_ISM_supp_table.py` |
+| Supplementary Table 2 | - | table (rebuilt here) | `supp_tables/SuppTable2_ISM_internal_TSS.tsv`<br>`supp_tables/SuppTable2_ISM_internal_TSS.xlsx` |
+
+Cross-dataset Zenodo bundle:
+
+| Bundle | Used by | Contents | Files |
+|---|---|---|---|
+| cross | Supplementary Figure 10 | tss5prime_completeness_data | `supp_analyses/tss_5prime/completeness/` (79 files) |
+| cross | Supplementary Figure 10 | tss_truncation_lengths | `supp_analyses/tss_5prime/truncation_check/ALS.lengths.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/PBMC.lengths.tsv.gz` |
+| cross | Supplementary Figure 10 | tss_truncation_reads | `supp_analyses/tss_5prime/truncation_check/ALS.reads.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/PBMC.reads.tsv.gz` |
+| cross | Supplementary Figure 11, Supplementary Table 2 | ism_data | `supp_analyses/ism_internal_tss/out/` (21 files) |
+| cross | Supplementary Figure 11 | ism_example_reads | `supp_analyses/ism_internal_tss/out/examples/reads.tsv.gz` |
+| cross | Supplementary Figure 7, Supplementary Figure 8 | sfig_proteoforms_orfs | `supp_analyses/proteoforms/orfs/FTD/LP00714.refGuided.scg.cdna.fasta.transdecoder.genome.gff3`<br>`supp_analyses/proteoforms/orfs/FTD/LP00714.refGuided.scg.cdna.fasta.transdecoder.pep`<br>`supp_analyses/proteoforms/orfs/FTD/ORFS_VERSION.txt`<br>`supp_analyses/proteoforms/orfs/PBMC/ORFS_VERSION.txt`<br>`supp_analyses/proteoforms/orfs/PBMC/PBMCs_pbio.LRAA.refGuided.scg.cdna.fasta.transdecoder.genome.gff3`<br>`supp_analyses/proteoforms/orfs/PBMC/PBMCs_pbio.LRAA.refGuided.scg.cdna.fasta.transdecoder.pep` |

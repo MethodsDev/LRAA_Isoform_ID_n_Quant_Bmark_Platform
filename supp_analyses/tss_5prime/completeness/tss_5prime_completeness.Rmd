@@ -261,8 +261,8 @@ downstream (D) site, pooled over clusters, for reads whose upstream base is not 
 
 ```{r event_sites}
 evs = rbindlist(lapply(DS, function(ds) {
-    f = c(PBMC = "../PBMCs_kinnex/LRAA_PBMCs_eval/__Site_Usage_Analysis/PBMCs.TSS_events_vs_CAGE.events.tsv",
-          ALS = "../ALS_LP00714/ALS_LRAA_eval/__Site_Usage_Analysis/LP00714.TSS_events_vs_CAGE.events.tsv")[ds]
+    f = c(PBMC = "../../../LRAA_paper-PBMCs_study/__Site_Usage_Analysis/PBMCs.TSS_events_vs_CAGE.events.tsv",
+          ALS = "../../../LRAA_paper-FTD_study/__Site_Usage_Analysis/LP00714.TSS_events_vs_CAGE.events.tsv")[ds]
     fread(f)[high_confidence == TRUE][, dataset := ds]
 }), fill = TRUE)
 evs[, down := gained_is_downstream == TRUE]

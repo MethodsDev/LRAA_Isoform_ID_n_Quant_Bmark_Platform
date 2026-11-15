@@ -12,9 +12,9 @@ SCRIPT    := $(LRAA_HOME)/util/sc/tss_5prime_completeness.py
 CTAT      := $(HOME)/CTAT_GENOME_LIBS/GRCh38_gencode_v22_CTAT_lib_Mar012021.plug-n-play/ctat_genome_lib_build_dir
 GTF       := $(CTAT)/ref_annot.gtf
 GENOME    := $(CTAT)/ref_genome.fa
-PBMC      := ../PBMCs_kinnex/LRAA_PBMCs_eval
-ALS       := ../ALS_LP00714/ALS_LRAA_eval
-RDNA_MASK := ../__shared_refs/rdna_mask.GRCh38.bed
+PBMC      := ../../../LRAA_paper-PBMCs_study
+ALS       := ../../../LRAA_paper-FTD_study
+RDNA_MASK := ../../../LRAA_paper-PBMCs_study/shared_refs/rdna_mask.GRCh38.bed
 CAGE      := $(PBMC)/__Site_Usage_Analysis/ext/hg38_fair+new_CAGE_peaks_phase1and2.bed.gz
 COMMON    := --gtf $(GTF) --genome $(GENOME) --HiFi --rdna_mask_bed $(RDNA_MASK) --cage_peaks $(CAGE) --CPU $(CPU)
 
@@ -48,7 +48,7 @@ report: all
 TSCRIPT   := $(LRAA_HOME)/util/sc/tandem_tss_features.py
 REFTSS    := ext/refTSS_v4.1_human_coordinate.hg38.bed.txt.gz
 TCOMMON   := --genome $(GENOME) --cage_peaks $(CAGE) --reftss $(REFTSS) --ref_gtf $(GTF) --CPU $(CPU)
-MCF7_RUN  := ../__LRAA_local_runs/bmark_v0.40.0-5a45947
+MCF7_RUN  ?= mcf7_lraa_run   # the MCF7 ONT LRAA run (BAM and outputs): not in the bundle
 PBMC_CG   := $(PBMC)/pbmcs_refGuided/pbmcs_refGuided_sc_cluster_guided/data
 ALS_CG    := $(ALS)/als_refGuided/als_refGuided_sc_cluster_guided/data
 
