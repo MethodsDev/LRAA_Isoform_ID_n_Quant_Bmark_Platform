@@ -53,56 +53,15 @@
 
 tools:
 
-  ##########
-  ## LRAA ##
-  ##########
-
-  # Whichever LRAA version produced the .LRAA.*.quant.expr file in
-  # raw_prog_results/ is the one that gets reported. We do not track
-  # the LRAA version separately -- the deposit step is responsible
-  # for ensuring only one LRAA file per sample is in raw_prog_results/.
-
-  - name: LRAA-v0.17.5
+  - name: LRAA-v0.51.0
     family: LRAA
-    quant_pattern: 'LRAA\.v0\.17\.5\..*quant\.expr$'
+    quant_pattern: 'LRAA\.v0\.51\.0\..*quant\.expr$'
     quant_id_col: 1
     quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.17\.5(\..*)?\.gtf$'
+    gtf_pattern: 'LRAA\.v0\.51\.0(\..*)?\.gtf$'
     color: teal
     display: true
     venn: true
-  - name: LRAA-v0.17.4
-    family: LRAA
-    quant_pattern: 'LRAA\.v0\.17\.4\..*quant\.expr$'
-    quant_id_col: 1
-    quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.17\.4(\..*)?\.gtf$'
-    color: teal
-    display: true
-    venn: false
-  - name: LRAA-v0.17.2
-    family: LRAA
-    quant_pattern: 'LRAA\.v0\.17\.2\..*quant\.expr$'
-    quant_id_col: 1
-    quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.17\.2(\..*)?\.gtf$'
-    color: teal
-    display: true
-    venn: false
-
-  - name: LRAA-v0.15.0
-    family: LRAA
-    quant_pattern: 'LRAA\.v0\.15\.0\..*quant\.expr$'
-    quant_id_col: 1
-    quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.15\.0(\..*)?\.gtf$'
-    color: teal
-    display: true
-    venn: false
-
-  ##############
-  ## IsoQuant ##
-  ##############
 
   - name: IsoQuant-v3.13.0
     family: IsoQuant
@@ -113,20 +72,6 @@ tools:
     display: true
     venn: true
 
-  - name: IsoQuant-v3.6.3
-    family: IsoQuant
-    quant_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.counts\.tsv$'
-    quant_id_col: 0
-    quant_tpm_col: 1
-    gtf_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.gtf$'
-    color: lightblue
-    display: true
-    venn: false
-
-  ###########
-  ## FLAIR ##
-  ###########
-
   - name: FLAIR-v3.0.0
     family: FLAIR
     quant_pattern: 'flair-v3\.0\.0\.counts\.tsv$'
@@ -135,20 +80,6 @@ tools:
     color: pink
     display: true
     venn: true
-
-  - name: FLAIR-v2.0.0
-    family: FLAIR
-    quant_pattern: 'flair-v2\.0\.0\.counts\.tsv$'
-    quant_id_col: 0
-    quant_tpm_col: 1
-    gtf_pattern: 'flair-v2\.0\.0\.gtf$'
-    color: hotpink
-    display: true
-    venn: false
-
-  ###############
-  ## StringTie ##
-  ###############
 
   - name: StringTie-v3.0.3
     family: StringTie
@@ -162,21 +93,6 @@ tools:
     display: true
     venn: true
 
-  - name: StringTie-v2.2.3
-    family: StringTie
-    quant_pattern: 'stringtie-v2\.2\.3\.stringtie\.quant\.tsv$'
-    quant_id_col: 1
-    quant_tpm_col: 4
-    quant_no_header: true
-    gtf_pattern: 'stringtie-v2\.2\.3\.stringtie\.gtf$'
-    color: lightseagreen
-    display: true
-    venn: false
-
-  ###########################
-  ## Oarfish - byAlignment ##
-  ###########################
-
   - name: Oarfish_align-v0.9.4
     family: Oarfish_align
     quant_pattern: 'oarfish-v0\.9\.4\.Oarfish\.byAlignment\.quant$'
@@ -186,19 +102,6 @@ tools:
     display: true
     venn: true
 
-  - name: Oarfish_align-v0.6.5
-    family: Oarfish_align
-    quant_pattern: 'oarfish-v0\.6\.5\.Oarfish\.byAlignment\.quant$'
-    quant_id_col: 0
-    quant_tpm_col: 2
-    color: gold
-    display: true
-    venn: false
-
-  #######################
-  ## Oarfish - byReads ##
-  #######################
-
   - name: Oarfish_reads-v0.9.4
     family: Oarfish_reads
     quant_pattern: 'oarfish-v0\.9\.4\.Oarfish\.byReads\.quant$'
@@ -207,19 +110,6 @@ tools:
     color: peachpuff
     display: true
     venn: true
-
-  - name: Oarfish_reads-v0.6.5
-    family: Oarfish_reads
-    quant_pattern: 'oarfish-v0\.6\.5\.Oarfish\.byReads\.quant$'
-    quant_id_col: 0
-    quant_tpm_col: 2
-    color: sandybrown
-    display: true
-    venn: false
-
-  ############
-  ## FLAMES ##
-  ############
 
   - name: FLAMES-v0.1
     family: FLAMES
@@ -232,10 +122,6 @@ tools:
     color: gainsboro
     display: true
     venn: true
-
-  ############
-  ## IsoSeq ##
-  ############
 
   - name: IsoSeq-v4.0.0
     family: IsoSeq
@@ -255,10 +141,6 @@ tools:
     display: true
     venn: true
 
-  #################
-  ## Mandalorion ##
-  #################
-
   - name: Mandalorion-v4.5.0
     family: Mandalorion
     quant_pattern: 'mandalorion-v4\.5\.0\.Mandalorian\.Isoforms\.filtered\.clean\.quant$'
@@ -269,10 +151,6 @@ tools:
     color: powderblue
     display: true
     venn: true
-
-  ##############
-  ## ESPRESSO ##
-  ##############
 
   - name: ESPRESSO-v1.6.0
     family: ESPRESSO
@@ -286,20 +164,6 @@ tools:
     display: true
     venn: true
 
-  - name: ESPRESSO-v1.5.0
-    family: ESPRESSO
-    quant_pattern: 'espresso-v1\.5\.0\.counts\.tsv$'
-    quant_id_col: 0
-    quant_tpm_col: 3
-    gtf_pattern: 'espresso-v1\.5\.0\.gtf$'
-    color: saddlebrown
-    display: true
-    venn: false
-
-  ###############
-  ## Isosceles ##
-  ###############
-
   - name: Isosceles-v0.2.0
     family: Isosceles
     quant_pattern: 'isosceles-v0\.2\.0\.counts$'
@@ -311,10 +175,6 @@ tools:
     display: true
     venn: true
 
-  ###########
-  ## Bambu ##
-  ###########
-
   - name: Bambu-v3.12.1
     family: Bambu
     quant_pattern: 'bambu-v3\.12\.1\.bambu\.counts\.txt$'
@@ -323,20 +183,6 @@ tools:
     color: forestgreen
     display: true
     venn: true
-
-  - name: Bambu-v3.4.0
-    family: Bambu
-    quant_pattern: 'bambu-v3\.4\.0\.bambu\.counts\.txt$'
-    quant_id_col: 0
-    quant_tpm_col: 2
-    gtf_pattern: 'bambu-v3\.4\.0\.bambu\.gtf$'
-    color: mediumseagreen
-    display: true
-    venn: false
-
-  ###########
-  ## TALON ##
-  ###########
 
   - name: TALON-v6.0
     family: TALON
@@ -348,3 +194,4 @@ tools:
     color: orange
     display: true
     venn: true
+

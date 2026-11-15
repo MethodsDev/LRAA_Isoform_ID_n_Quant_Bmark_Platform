@@ -18,54 +18,17 @@
 
 tools:
 
-  ##########
-  ## LRAA ##
-  ##########
-
-  # LRAA emits two filename shapes depending on the WDL execution path:
-  #   <sample>.LRAA.gtf            (scatter mode -- merge_GTFs strips suffix)
-  #   <sample>.LRAA.ref-free.gtf   (direct mode -- LRAA_runner keeps suffix)
-  # Both represent the same denovo output for that sample. The patterns
-  # below catch both shapes; no sample has both files at once.
-
-  - name: LRAA-v0.17.5
+  - name: LRAA-v0.51.0
     family: LRAA
-    quant_pattern: 'LRAA\.v0\.17\.5\..*quant\.expr$'
+    quant_pattern: 'LRAA\.v0\.51\.0\..*quant\.expr$'
     quant_id_col: 1
     quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.17\.5(\..*)?\.gtf$'
+    gtf_pattern: 'LRAA\.v0\.51\.0(\..*)?\.gtf$'
     gtf_converter: strip_blanks
     gtf_source: own
-    color: teal
+    color: mediumorchid
     display: true
     venn: true
-  - name: LRAA-v0.17.2
-    family: LRAA
-    quant_pattern: 'LRAA\.v0\.17\.2\..*quant\.expr$'
-    quant_id_col: 1
-    quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.17\.2(\..*)?\.gtf$'
-    gtf_converter: strip_blanks
-    gtf_source: own
-    color: teal
-    display: true
-    venn: false
-
-  - name: LRAA-v0.15.0
-    family: LRAA
-    quant_pattern: 'LRAA\.v0\.15\.0\..*quant\.expr$'
-    quant_id_col: 1
-    quant_tpm_col: 3
-    gtf_pattern: 'LRAA\.v0\.15\.0(\..*)?\.gtf$'
-    gtf_converter: strip_blanks
-    gtf_source: own
-    color: teal
-    display: true
-    venn: false
-
-  ##############
-  ## IsoQuant ##
-  ##############
 
   - name: IsoQuant-v3.13.0
     family: IsoQuant
@@ -77,21 +40,6 @@ tools:
     color: blue
     display: true
     venn: true
-
-  - name: IsoQuant-v3.6.3
-    family: IsoQuant
-    quant_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.counts\.tsv$'
-    quant_id_col: 0
-    quant_tpm_col: 1
-    gtf_pattern: 'isoquant-v3\.6\.3\.IsoQuant\.gtf$'
-    gtf_source: own
-    color: lightblue
-    display: true
-    venn: false
-
-  ###############
-  ## StringTie ##
-  ###############
 
   - name: StringTie-v3.0.3
     family: StringTie
@@ -106,22 +54,6 @@ tools:
     display: true
     venn: true
 
-  - name: StringTie-v2.2.3
-    family: StringTie
-    quant_pattern: 'ref-free\.stringtie-v2\.2\.3\.stringtie\.quant\.tsv$'
-    quant_id_col: 1
-    quant_tpm_col: 4
-    quant_no_header: true
-    gtf_pattern: 'ref-free\.stringtie-v2\.2\.3\.stringtie\.gtf$'
-    gtf_source: own
-    color: lightseagreen
-    display: true
-    venn: false
-
-  ############
-  ## IsoSeq ##
-  ############
-
   - name: IsoSeq-v4.0.0
     family: IsoSeq
     quant_pattern: 'isoseq-v4\.0\.0\.IsoSeq.*\.abundance\.txt$'
@@ -134,10 +66,6 @@ tools:
     display: true
     venn: true
 
-  #################
-  ## Mandalorion ##
-  #################
-
   - name: Mandalorion-v4.5.0
     family: Mandalorion
     quant_pattern: 'mandalorion-v4\.5\.0\.Mandalorian\.Isoforms\.filtered\.clean\.quant$'
@@ -148,10 +76,6 @@ tools:
     color: powderblue
     display: true
     venn: true
-
-  ##############
-  ## ESPRESSO ##
-  ##############
 
   - name: ESPRESSO-v1.6.0
     family: ESPRESSO
@@ -166,13 +90,6 @@ tools:
     display: true
     venn: true
 
-  ###########
-  ## Bambu ##
-  ###########
-
-  # Bambu emits a "Ref-Free." infix in the DENOVO_ID outputs to
-  # distinguish from QUANT_ONLY's Ref-Guided variant.
-
   - name: Bambu-v3.12.1
     family: Bambu
     quant_pattern: 'Ref-Free\.bambu-v3\.12\.1\.bambu\.counts\.txt$'
@@ -184,13 +101,3 @@ tools:
     display: true
     venn: true
 
-  - name: Bambu-v3.4.0
-    family: Bambu
-    quant_pattern: 'Ref-Free\.bambu-v3\.4\.0\.bambu\.counts\.txt$'
-    quant_id_col: 0
-    quant_tpm_col: 2
-    gtf_pattern: 'Ref-Free\.bambu-v3\.4\.0\.bambu\.gtf$'
-    gtf_source: own
-    color: mediumseagreen
-    display: true
-    venn: false

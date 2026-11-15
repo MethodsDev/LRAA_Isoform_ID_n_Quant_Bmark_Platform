@@ -49,6 +49,51 @@ def getFiles(path, dataType):
         print("Must specify dataType argument.")
 
 
+def _sanitize_gtf_stray_quotes(src, dst):
+    """
+    Copy `src` to `dst`, stripping a single stray trailing double-quote from
+    any line with an odd number of double-quotes. Some reference GTFs (e.g.
+    GRCh38.gencode.v39 ...one_transcript_per_gene..., where ~2600 'gene'
+    lines end '...; level 3;"') carry a spurious trailing '"' that makes
+    polars' CSV reader treat it as an open quoted field spanning lines,
+    raising ComputeError. Only odd-quote lines that end in '"' are altered;
+    every other line is copied verbatim. Returns the number of lines fixed.
+    """
+    n_fixed = 0
+    with open(src, "rt") as fh, open(dst, "wt") as ofh:
+        for line in fh:
+            content = line.rstrip("\n")
+            if content.count('"') % 2 == 1 and content.endswith('"'):
+                content = content[:-1]
+                n_fixed += 1
+            ofh.write(content + "\n")
+    return n_fixed
+
+
+def _read_gtf_tolerant(gtf):
+    """
+    read_gtf(gtf), but if polars fails to parse (e.g. malformed stray-quote
+    lines), sanitize to a temp copy and retry. Well-formed GTFs parse on the
+    first attempt and never touch the sanitizer, so their result is unchanged.
+    """
+    try:
+        return read_gtf(gtf)
+    except Exception as e:
+        import tempfile
+
+        fd, tmp = tempfile.mkstemp(suffix=".gtf")
+        os.close(fd)
+        try:
+            n_fixed = _sanitize_gtf_stray_quotes(gtf, tmp)
+            print(
+                "  read_gtf failed on {} ({}); sanitized {} stray-quote "
+                "line(s) and retrying".format(gtf, type(e).__name__, n_fixed)
+            )
+            return read_gtf(tmp)
+        finally:
+            os.remove(tmp)
+
+
 def processGtf(gtf):
     """
     Read in GTF file, subset for only multi-exon transcripts and
@@ -56,7 +101,7 @@ def processGtf(gtf):
     """
     print("-processGtf( {} )\n".format(gtf))
     try:
-        df_polar = read_gtf(gtf)
+        df_polar = _read_gtf_tolerant(gtf)
         df = pd.DataFrame(df_polar)
         df.columns = df_polar.columns
     except Exception as exc:
@@ -669,15 +714,28 @@ def f1_score(df):
 
 
 def calc_TP_FP_FN(i_ref_df, i_sample_df):
-    """Calculate TP, FP and FN to get Sensitivty and False Discovery Rate of a sample."""
+    """Calculate TP, FP and FN to get Sensitivty and False Discovery Rate of a sample.
 
-    i_ref_tmp_df = i_ref_df[["tpm"]].copy().rename(columns={"tpm": "ref_tpm"})
+    If i_ref_df carries an "fn_eligible" boolean column, only reference entries
+    flagged True can become FNs; the rest are left unscored. TP assignment is
+    unaffected, so a reference isoform can still be credited to whoever found it
+    while not being charged against everyone who missed it. Without the column
+    every reference entry is FN-eligible, which is the historical behavior.
+    """
+
+    ref_cols = ["tpm"] + (["fn_eligible"] if "fn_eligible" in i_ref_df.columns else [])
+    i_ref_tmp_df = i_ref_df[ref_cols].copy().rename(columns={"tpm": "ref_tpm"})
     i_ref_tmp_df["is_ref"] = True
 
     i_merged_df = i_ref_tmp_df.join(i_sample_df, how="outer")
     i_merged_df["is_ref"] = i_merged_df["is_ref"].fillna(False)
     i_merged_df["ref_tpm"] = i_merged_df["ref_tpm"].fillna(0)
     i_merged_df["tpm"] = i_merged_df["tpm"].fillna(0)
+    if "fn_eligible" in i_merged_df.columns:
+        i_merged_df["fn_eligible"] = i_merged_df["fn_eligible"].fillna(False).astype(bool)
+        fn_eligible = i_merged_df["fn_eligible"]
+    else:
+        fn_eligible = True
 
     # set TP, FP, FN
     i_merged_df["class"] = "?"
@@ -701,7 +759,8 @@ def calc_TP_FP_FN(i_ref_df, i_sample_df):
     i_merged_df.loc[
         (i_merged_df["is_ref"] == True)
         & (i_merged_df["ref_tpm"] > 0)
-        & (i_merged_df["tpm"] == 0),
+        & (i_merged_df["tpm"] == 0)
+        & fn_eligible,
         "class",
     ] = "FN"
 

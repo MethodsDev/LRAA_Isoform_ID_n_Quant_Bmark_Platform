@@ -41,12 +41,14 @@ summarize:
 	done
 	$(MAKE) render-reports
 
+# each report's knitr *_files/ dir is removed first, so no figure from an earlier knit survives
 render-reports:
 	@for report in $(REPORTS); do \
 		echo "Rendering $$report..."; \
 		report_dir=$${report%/*}; \
 		report_file=$${report##*/}; \
-		(cd "$$report_dir" && $(RSCRIPT) -e "rmarkdown::render('$$report_file')") || exit $$?; \
+		(cd "$$report_dir" && rm -rf "$${report_file%.Rmd}_files" && \
+		 $(RSCRIPT) -e "rmarkdown::render('$$report_file')") || exit $$?; \
 	done
 
 install-inputs: install-references install-predictions
