@@ -1,0 +1,415 @@
+---
+title: "Read 5' completeness and the cap (untemplated-G) signature: PBMC vs ALS"
+output: github_document
+---
+
+Measurement only, to review before any change to LRAA's TSS calling. In ALS cortex nuclei,
+most high-confidence TSS switches have a neuron cluster favouring a downstream TSS, and the
+reads of housekeeping genes rarely reach the TSS (`ALS_LRAA_eval/__TSS_Truncation_Check`).
+This report asks:
+
+- **A.** How 5' completeness falls with distance from the 3' end, globally and per cluster.
+- **B.** How much of the variation is per cluster and how much per gene.
+- **C.** Whether the untemplated-G signature that template switching leaves at a capped 5' end
+  separates reads that start at a TSS from reads that start inside a transcript body.
+- **D.** What a completeness-aware degradation threshold would do to the high-confidence TSS
+  events of each dataset.
+
+Tables: `util/sc/tss_5prime_completeness.py` (LRAA), via the `Makefile` here. Reads are taken
+with LRAA's read filters and transcribed-strand rule. Each read's 5' clip, and whether LRAA
+strips it as untemplated G's, come from LRAA's `Pretty_alignment`. The exact rules are in the
+script's header and in `README.md`.
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 10, dpi = 120)
+suppressPackageStartupMessages({ library(tidyverse); library(data.table); library(lme4); library(patchwork) })
+theme_set(theme_bw(base_size = 11))
+```
+
+```{r data}
+class_map = list(
+    ALS = c("0" = "Oligodendrocyte", "3" = "Oligodendrocyte", "1" = "Excitatory neuron", "8" = "Excitatory neuron",
+            "4" = "Inhibitory neuron", "6" = "Inhibitory neuron", "2" = "Astrocyte", "7" = "Astrocyte", "12" = "Astrocyte",
+            "5" = "Microglia", "9" = "OPC", "10" = "Vascular / meningeal", "11" = "Vascular / meningeal",
+            "13" = "Vascular / meningeal"),
+    PBMC = c("1" = "Monocyte / DC", "11" = "Monocyte / DC", "13" = "Monocyte / DC", "6" = "B", "9" = "B",
+             "3" = "CD4 T", "7" = "CD4 T", "0" = "CD4 T", "5" = "CD4 T", "12" = "CD4 T",
+             "2" = "CD8 T / NK", "4" = "CD8 T / NK", "8" = "CD8 T / NK", "10" = "CD8 T / NK"))
+class_order = c("Excitatory neuron", "Inhibitory neuron", "Oligodendrocyte", "OPC", "Astrocyte", "Microglia",
+                "Vascular / meningeal", "Monocyte / DC", "B", "CD4 T", "CD8 T / NK")
+cls = function(ds, cluster) unname(class_map[[ds]][sub("Cluster_", "", cluster)])
+DS = c("PBMC", "ALS")
+
+genes = rbindlist(lapply(DS, function(ds) fread(paste0(ds, ".genes.tsv"))[, dataset := ds]), fill = TRUE)
+use = genes[status == "ok" & cage %in% c("single", "none")]
+ext = rbindlist(lapply(DS, function(ds) fread(paste0(ds, ".extent.tsv.gz"))[, dataset := ds]))
+ext = merge(ext, use[, .(dataset, gene_key, L, gc100, first_exon_len, n_fit_reads)], by = c("dataset", "gene_key"))
+ext[, class := cls(dataset, cluster), by = dataset]
+# histogram rows of the reads that do not reach the TSS: bin (nt from the 3' end) -> reads
+hist = ext[extent_hist != "", {
+    p = strsplit(strsplit(extent_hist, ";")[[1]], ":")
+    .(bin = as.integer(sapply(p, `[`, 1)), n = as.integer(sapply(p, `[`, 2)))
+}, by = .(dataset, gene_key, cluster)]
+```
+
+```{r gene_counts}
+knitr::kable(genes[, .N, by = .(dataset, status, cage)][order(dataset, status, cage)],
+             caption = "Genes with exactly one LRAA TSS site, by outcome. Used: status ok and CAGE single or none.")
+```
+
+## A. 5' completeness curves
+
+For each gene and group of cells, S(d) is the share of its polyA-anchored reads whose 5'
+extent from the 3' end is at least d nt, for d up to the gene's length L. Reads starting
+within 50 nt of the TSS count as full length. K(d) is the mean of S(d) over genes with
+L >= d and at least 20 anchored reads in that group, so each gene counts once whatever its
+expression. Groups are a whole dataset, a cell-type class, or a cluster.
+
+```{r curves}
+grid = seq(0, 6000, by = 25)
+gene_survival = function(group_cols) {
+    # per gene x group: anchored reads n, reaching r; S(d) = (r + non-reaching reads with
+    # bin >= d) / n for d on the grid up to the gene's length
+    tot = ext[, .(n = sum(n_anchored), r = sum(n_reach), L = L[1]), by = c("dataset", "gene_key", group_cols)][n >= 20]
+    h = hist[, .(n = sum(n)), by = c("dataset", "gene_key", group_cols, "bin")]
+    hc = h[order(-bin), .(bin, cum = cumsum(n)), by = c("dataset", "gene_key", group_cols)][order(bin)]
+    pts = tot[, .(d = grid[grid <= L]), by = c("dataset", "gene_key", group_cols)]
+    pts = merge(pts, tot, by = c("dataset", "gene_key", group_cols))
+    pts[, bin := d]
+    # cum at the smallest bin >= d: a backward rolling join on bin
+    pts[, cum := hc[pts, on = c("dataset", "gene_key", group_cols, "bin"), roll = -Inf, x.cum]]
+    pts[is.na(cum), cum := 0]
+    pts[, S := (r + cum) / n]
+    pts[, c("dataset", "gene_key", group_cols, "d", "n", "r", "L", "S"), with = FALSE]
+}
+ext[, all := "all"]
+hist = merge(hist, ext[, .(dataset, gene_key, cluster, class, all)], by = c("dataset", "gene_key", "cluster"))
+S_all = gene_survival("all")
+S_class = gene_survival("class")
+S_cluster = gene_survival("cluster")
+K = function(S, group_cols) S[, .(K = mean(S), genes = .N), by = c("dataset", group_cols, "d")][genes >= 20]
+K_all = K(S_all, "all"); K_class = K(S_class, "class"); K_cluster = K(S_cluster, "cluster")
+K_cluster[, class := cls(dataset, cluster), by = dataset]
+
+ggplot(K_all, aes(d, K, color = dataset)) + geom_line(linewidth = 1) +
+    coord_cartesian(xlim = c(0, 4000), ylim = c(0, 1)) +
+    labs(x = "distance from the 3' end, d (nt)", y = "K(d): share of molecules reaching d", title = "Whole dataset")
+```
+
+```{r curves_class, fig.height = 4.5}
+ggplot(K_class, aes(d, K, color = factor(class, levels = class_order))) + geom_line(linewidth = 0.8) +
+    facet_wrap(~ dataset) + coord_cartesian(xlim = c(0, 4000), ylim = c(0, 1)) +
+    labs(x = "d (nt from the 3' end)", y = "K(d)", color = NULL, title = "By cell-type class")
+```
+
+```{r curves_cluster, fig.height = 4.5}
+ggplot(K_cluster, aes(d, K, group = cluster, color = factor(class, levels = class_order))) + geom_line(linewidth = 0.5) +
+    facet_wrap(~ dataset) + coord_cartesian(xlim = c(0, 4000), ylim = c(0, 1)) +
+    labs(x = "d (nt from the 3' end)", y = "K(d)", color = NULL, title = "By cluster")
+at = c(500, 1000, 1500, 2000, 3000)
+knitr::kable(dcast(K_class[d %in% at], dataset + class ~ d, value.var = "K")[order(dataset, class)], digits = 2,
+             caption = "K(d) by class at selected distances from the 3' end")
+```
+
+## B. Cluster vs gene: where the variation is
+
+Per gene and cluster (at least 50 anchored reads): observed share reaching the TSS against
+the share predicted by the cluster's curve at the gene's length, K_cluster(L).
+
+```{r per_gene}
+kc = K_cluster[, .(dataset, cluster, d, K)]
+gc_tab = ext[, .(n = sum(n_anchored), r = sum(n_reach)), by = .(dataset, gene_key, cluster, class, L, gc100, first_exon_len, n_fit_reads)][n >= 50]
+gc_tab[, dL := pmin(round(L / 25) * 25, max(grid))]
+gc_tab = merge(gc_tab, kc, by.x = c("dataset", "cluster", "dL"), by.y = c("dataset", "cluster", "d"), all.x = TRUE)
+gc_tab[, obs := r / n]
+ggplot(gc_tab[!is.na(K)], aes(K, obs)) + geom_point(alpha = 0.15, size = 0.5) + geom_abline(color = "red") +
+    facet_wrap(~ dataset) + labs(x = "predicted from the cluster's curve, K_cluster(L)", y = "observed share reaching the TSS")
+knitr::kable(gc_tab[!is.na(K), .(gene_clusters = .N, genes = uniqueN(gene_key),
+                                 cor_pred_obs = cor(qlogis(pmin(pmax(K, 1e-3), 1 - 1e-3)), qlogis(pmin(pmax(obs, 1e-3), 1 - 1e-3))),
+                                 median_abs_err = median(abs(obs - K))), by = dataset], digits = 3)
+```
+
+**Variance decomposition.** A binomial GLM of the per gene x cluster reach counts, adding
+terms in turn: log(L), then cluster, then gene. The table gives each term's share of the
+null deviance and what is left over. The residual is the gene x cluster interaction plus
+binomial noise; its ratio to the residual degrees of freedom shows how much is beyond
+binomial noise.
+
+```{r decomp}
+# additive logit model gene + cluster, fitted by alternating one-dimensional Newton updates
+# (a glm with thousands of gene dummies is too slow); log(L) is constant within a gene, so
+# the gene terms absorb it
+fit_gene_cluster = function(d, iters = 50) {
+    a = setNames(rep(0, uniqueN(d$gene_key)), unique(d$gene_key)); b = setNames(rep(0, uniqueN(d$cluster)), unique(d$cluster))
+    upd = function(grp, eta_other, r, n, cur) {
+        for (k in 1:5) {
+            p = plogis(cur[grp] + eta_other)
+            g = tapply(r - n * p, grp, sum); h = tapply(n * p * (1 - p), grp, sum)
+            cur[names(g)] = cur[names(g)] + g / pmax(h, 1e-9)
+        }
+        cur
+    }
+    for (i in 1:iters) {
+        a = upd(d$gene_key, b[d$cluster], d$r, d$n, a)
+        b = upd(d$cluster, a[d$gene_key], d$r, d$n, b)
+    }
+    p = pmin(pmax(plogis(a[d$gene_key] + b[d$cluster]), 1e-12), 1 - 1e-12)
+    -2 * sum(dbinom(d$r, d$n, p, log = TRUE) - dbinom(d$r, d$n, pmin(pmax(d$r / d$n, 1e-12), 1 - 1e-12), log = TRUE))
+}
+decomp = rbindlist(lapply(DS, function(ds) {
+    d = gc_tab[dataset == ds]
+    f0 = glm(cbind(r, n - r) ~ 1, binomial, d)
+    f1 = glm(cbind(r, n - r) ~ log(L), binomial, d)
+    f2 = glm(cbind(r, n - r) ~ log(L) + cluster, binomial, d)
+    fc = glm(cbind(r, n - r) ~ cluster, binomial, d)
+    d3 = fit_gene_cluster(d)
+    dev = c(deviance(f0), deviance(f1), deviance(f2), d3)
+    df3 = nrow(d) - uniqueN(d$gene_key) - uniqueN(d$cluster) + 1
+    data.table(dataset = ds, term = c("log(L)", "+ cluster", "+ gene (beyond its length)", "residual (gene x cluster)"),
+               share_of_null_deviance = c(-diff(dev), dev[4]) / dev[1],
+               cluster_alone = c(NA, (deviance(f0) - deviance(fc)) / dev[1], NA, NA),
+               resid_dev_per_df = c(NA, NA, NA, d3 / df3))
+}))
+knitr::kable(decomp, digits = 3)
+
+```
+
+```{r mixed}
+fits = lapply(DS, function(ds) {
+    d = gc_tab[dataset == ds]
+    glmer(cbind(r, n - r) ~ scale(log(L)) + cluster + (1 | gene_key), family = binomial, data = d,
+          control = glmerControl(optimizer = "bobyqa"))
+})
+names(fits) = DS
+mix = rbindlist(lapply(DS, function(ds) {
+    fit = fits[[ds]]; ce = fixef(fit)[grepl("^cluster", names(fixef(fit)))]
+    data.table(dataset = ds, `gene SD (logit)` = sqrt(VarCorr(fit)$gene_key[1]),
+               `cluster range (logit, max - min)` = diff(range(c(0, ce))),
+               `length effect per SD of log L (logit)` = unname(fixef(fit)[2]))
+}))
+knitr::kable(mix, digits = 2, caption = "Mixed model: reach ~ log(L) + cluster + (1 | gene)")
+
+re = rbindlist(lapply(DS, function(ds) {
+    r = ranef(fits[[ds]])$gene_key
+    data.table(dataset = ds, gene_key = rownames(r), gene_effect = r[, 1])
+}))
+feat = merge(re, use[, .(dataset, gene_key, L, gc100, first_exon_len, n_fit_reads)], by = c("dataset", "gene_key"))
+feat_cor = feat[, .(`GC of first 100 nt` = cor(gene_effect, gc100, method = "spearman", use = "complete"),
+                    `log length` = cor(gene_effect, log(L), method = "spearman"),
+                    `first exon length` = cor(gene_effect, first_exon_len, method = "spearman"),
+                    `log reads (expression)` = cor(gene_effect, log(n_fit_reads), method = "spearman")), by = dataset]
+knitr::kable(feat_cor, digits = 2, caption = "Spearman correlation of the per-gene effect (higher = reaches the TSS more often than its length and cluster predict) with gene features")
+```
+
+```{r gene_effect_consistency, fig.height = 4}
+both = dcast(re, gene_key ~ dataset, value.var = "gene_effect")[!is.na(ALS) & !is.na(PBMC)]
+ggplot(both, aes(PBMC, ALS)) + geom_point(alpha = 0.3, size = 0.6) + geom_smooth(method = "lm", se = FALSE) +
+    labs(x = "per-gene effect in PBMC (logit)", y = "per-gene effect in ALS (logit)",
+         title = sprintf("Same genes in both datasets (n = %d): Spearman %.2f", nrow(both),
+                         cor(both$PBMC, both$ALS, method = "spearman")))
+```
+
+## C. The untemplated-G (cap) signature
+
+What the reads carry at their 5' ends (transcript orientation), on a sample of chr12 reads:
+
+- **PBMC:** 66% have no clip and 25% a 1-base clip. Among clipped reads the proximal base is
+  mostly a single G (about 42k of 66k); the next most common is a single A.
+- **ALS:** 79% have no clip and 11% a 1-base clip. That clip is mostly a single A (about 13.5k)
+  and less often a single G (about 5.9k).
+
+LRAA strips a whole clip of 1-3 G's, or a proximal run of at least 3 G's, as untemplated G's
+(`clip = G` below). An untemplated G aligns when the genome itself has a G just upstream of
+the start, so it leaves no clip there. Signature rates are therefore given separately for
+reads whose upstream genomic base is G (`upstream_G = 1`) and is not.
+
+```{r capsig}
+cap = rbindlist(lapply(DS, function(ds) fread(paste0(ds, ".capsig.tsv.gz"))[, dataset := ds]))
+cap = cap[use[, .(dataset, gene_key)], on = .(dataset, gene_key), nomatch = 0]
+cap[, class := cls(dataset, cluster), by = dataset]
+cap[, five_class := factor(five_class, levels = c("TSS", "near", "body"))]
+tab = cap[, .(reads = sum(reads)), by = .(dataset, upstream_G, five_class, clip)]
+tab[, share := reads / sum(reads), by = .(dataset, upstream_G, five_class)]
+knitr::kable(dcast(tab, dataset + upstream_G + five_class ~ clip, value.var = "share")[order(dataset, upstream_G, five_class)],
+             digits = 3, caption = "Share of reads by 5' clip class. TSS: starts within 50 nt of the gene's TSS; near: 50-100 nt downstream; body: > 100 nt downstream")
+grate = cap[upstream_G == 0, .(G_rate = sum(reads[clip == "G"]) / sum(reads), reads = sum(reads)),
+            by = .(dataset, class, five_class)]
+ggplot(grate[five_class != "near"], aes(factor(class, levels = class_order), G_rate, fill = five_class)) +
+    geom_col(position = "dodge") + facet_wrap(~ dataset, scales = "free_x") +
+    labs(x = NULL, y = "share of reads with a G signature (upstream base not G)", fill = "read starts at",
+         title = "G signature: reads starting at the TSS vs inside the transcript body") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r capsig_gene, fig.height = 4.5}
+pg = cap[upstream_G == 0 & five_class != "near", .(G = sum(reads[clip == "G"]), n = sum(reads)),
+         by = .(dataset, gene_key, five_class)][n >= 20]
+pgw = dcast(pg[, .(dataset, gene_key, five_class, rate = G / n)], dataset + gene_key ~ five_class, value.var = "rate")[!is.na(TSS) & !is.na(body)]
+ggplot(pgw, aes(body, TSS)) + geom_point(alpha = 0.3, size = 0.6) + geom_abline(color = "red") +
+    facet_wrap(~ dataset) + coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+    labs(x = "G-signature rate, reads starting in the body", y = "G-signature rate, reads starting at the TSS",
+         title = "Per gene (>= 20 reads of each kind, upstream base not G)")
+knitr::kable(pgw[, .(genes = .N, median_TSS = median(TSS), median_body = median(body),
+                     share_genes_TSS_higher = mean(TSS > body)), by = dataset], digits = 2)
+```
+
+### At the high-confidence TSS events' sites
+
+The same signature for reads starting within 25 nt of each event's upstream (U) and
+downstream (D) site, pooled over clusters, for reads whose upstream base is not G. Within a
+25 nt window the upstream base varies from read to read, so most sites have enough such reads.
+
+```{r event_sites}
+evs = rbindlist(lapply(DS, function(ds) {
+    f = c(PBMC = "../PBMCs_kinnex/LRAA_PBMCs_eval/__Site_Usage_Analysis/PBMCs.TSS_events_vs_CAGE.events.tsv",
+          ALS = "../ALS_LP00714/ALS_LRAA_eval/__Site_Usage_Analysis/LP00714.TSS_events_vs_CAGE.events.tsv")[ds]
+    fread(f)[high_confidence == TRUE][, dataset := ds]
+}), fill = TRUE)
+evs[, down := gained_is_downstream == TRUE]
+evs[, `:=`(U_site = fifelse(down, lost_site, gained_site), D_site = fifelse(down, gained_site, lost_site),
+           D_A = fifelse(down, gained_reads_A, lost_reads_A), D_B = fifelse(down, gained_reads_B, lost_reads_B),
+           U_A = fifelse(down, lost_reads_A, gained_reads_A), U_B = fifelse(down, lost_reads_B, gained_reads_B))]
+evs[, `:=`(shD_A = D_A / (D_A + U_A), shD_B = D_B / (D_B + U_B))]
+evs[, `:=`(fav = fifelse(shD_B >= shD_A, cluster_B, cluster_A), oth = fifelse(shD_B >= shD_A, cluster_A, cluster_B))]
+evs[, fav_class := cls(dataset, fav), by = dataset]
+
+es = rbindlist(lapply(DS, function(ds) fread(paste0(ds, ".event_sites.tsv.gz"))[, dataset := ds]))
+srate = es[upstream_G == 0, .(G_rate = sum(reads[clip == "G"]) / sum(reads), n = sum(reads)), by = .(dataset, site_id)]
+ev_sites = unique(evs[, .(dataset, gene_key, gene_symbol, U_site, D_site)])
+ev_sites = merge(ev_sites, srate[, .(dataset, U_site = site_id, U_G = G_rate, U_n = n)], by = c("dataset", "U_site"), all.x = TRUE)
+ev_sites = merge(ev_sites, srate[, .(dataset, D_site = site_id, D_G = G_rate, D_n = n)], by = c("dataset", "D_site"), all.x = TRUE)
+ggplot(ev_sites[U_n >= 20 & D_n >= 20], aes(U_G, D_G)) + geom_point(alpha = 0.5) + geom_abline(color = "red") +
+    facet_wrap(~ dataset) + coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+    labs(x = "G-signature rate at the upstream site", y = "at the downstream site",
+         title = "High-confidence TSS events: site pairs (>= 20 reads at each, upstream base not G)")
+knitr::kable(ev_sites[U_n >= 20 & D_n >= 20, .(site_pairs = .N, median_U = median(U_G), median_D = median(D_G),
+                                               share_D_lower = mean(D_G < U_G)), by = dataset], digits = 2)
+```
+
+## D. A completeness-aware degradation threshold, simulated on the existing events
+
+Suppose every molecule of a gene started at the upstream site U. A read would still start in
+the 50 nt window around the downstream site D whenever the molecule's read stops there. In
+cluster c, the expected number of such reads per read that reaches U is
+
+  r_c = (K_c(d_D - 25) - K_c(d_D + 25)) / K_c(d_U)
+
+where d_U and d_D are the distances of U and D from the 3' end, taken as the median aligned
+distances of the reads that start at U, and K_c is cluster c's curve from A. This applies
+only when D lies inside the molecules that start at U: at least half of the U-start reads
+have D in an aligned exon. Otherwise a truncated U molecule cannot start at D, and the event
+is exempt (AIF1-type alternative first exons).
+
+Two rules, on the cluster where D's share of the U + D reads is higher (`fav`):
+
+- **flag 1, truncation-consistent:** D_fav <= 2 x U_fav x r_fav. Then at least half of D's
+  reads could be truncated U molecules. This is the completeness-aware analogue of LRAA's
+  fixed `max_frac_alt_TSS_from_degradation = 0.20`.
+- **flag 2, corrected shift:** subtract the expected truncation reads, D'_c = max(0, D_c - U_c r_c),
+  and recompute D's share in both clusters. Flag if the corrected shift is < 0.2, or less than
+  half the observed U-vs-D shift.
+
+Not assessable: K_c(d_U) < 0.02, where the curve is too thin to divide by.
+
+```{r simulate}
+pairs = rbindlist(lapply(DS, function(ds) fread(paste0(ds, ".event_pairs.tsv"))[, dataset := ds]))
+evs = merge(evs, pairs[, .(dataset, gene_key, U_site, D_site, D_in_U_body, d_U, d_D, U_start_reads)],
+            by = c("dataset", "gene_key", "U_site", "D_site"), all.x = TRUE)
+kfun = function(ds, cl, d) {
+    k = K_cluster[dataset == ds & cluster == cl]
+    if (!nrow(k) || is.na(d)) return(NA_real_)
+    approx(k$d, k$K, xout = pmax(0, d), rule = 2)$y
+}
+simulate = function(factor = 2, min_shift = 0.2) {
+    e = copy(evs)
+    e[, applicable := !is.na(D_in_U_body) & D_in_U_body >= 0.5 & !is.na(d_U) & !is.na(d_D)]
+    e[, c("KU_A", "KU_B", "w_A", "w_B") := {
+        list(mapply(kfun, dataset, cluster_A, d_U), mapply(kfun, dataset, cluster_B, d_U),
+             mapply(kfun, dataset, cluster_A, d_D - 25) - mapply(kfun, dataset, cluster_A, d_D + 25),
+             mapply(kfun, dataset, cluster_B, d_D - 25) - mapply(kfun, dataset, cluster_B, d_D + 25))
+    }]
+    e[, `:=`(r_A = pmax(w_A, 0) / KU_A, r_B = pmax(w_B, 0) / KU_B)]
+    e[, assessable := applicable & pmin(KU_A, KU_B) >= 0.02]
+    e[, `:=`(r_fav = fifelse(fav == cluster_B, r_B, r_A), D_fav = fifelse(fav == cluster_B, D_B, D_A),
+             U_fav = fifelse(fav == cluster_B, U_B, U_A))]
+    e[, flag1 := assessable & D_fav <= factor * U_fav * r_fav]
+    e[, `:=`(Dc_A = pmax(0, D_A - U_A * r_A), Dc_B = pmax(0, D_B - U_B * r_B))]
+    e[, `:=`(shDc_A = Dc_A / (Dc_A + U_A), shDc_B = Dc_B / (Dc_B + U_B))]
+    e[, obs_shift := abs(shD_B - shD_A)]
+    e[, corr_shift := fifelse(fav == cluster_B, shDc_B - shDc_A, shDc_A - shDc_B)]
+    e[, flag2 := assessable & (corr_shift < min_shift | corr_shift < 0.5 * obs_shift)]
+    e[, outcome := fcase(!applicable, "exempt (D not in U molecules)", !assessable, "not assessable",
+                         flag1 | flag2, "flagged", default = "retained")]
+    e[]
+}
+sim = simulate()
+out = sim[, .(events = .N, genes = uniqueN(gene_key)), by = .(dataset, outcome)][order(dataset, outcome)]
+knitr::kable(out, caption = "High-confidence TSS events under the simulated threshold (factor 2, corrected shift 0.2)")
+knitr::kable(sim[, .(flag1 = sum(flag1, na.rm = TRUE), flag2 = sum(flag2, na.rm = TRUE),
+                     both = sum(flag1 & flag2, na.rm = TRUE), assessable = sum(assessable, na.rm = TRUE)), by = dataset],
+             caption = "Which rule flags")
+sens = rbindlist(lapply(c(1.5, 2, 3), function(f) simulate(factor = f)[, .(factor = f, flagged = sum(outcome == "flagged"),
+                                                                           events = .N), by = dataset]))
+knitr::kable(dcast(sens, dataset + events ~ factor, value.var = "flagged"), caption = "Flagged events by the flag-1 factor")
+```
+
+```{r simulate_who}
+by_class = sim[, .(events = .N, flagged = sum(outcome == "flagged"), exempt = sum(grepl("exempt", outcome))),
+               by = .(dataset, fav_class)][order(dataset, -events)]
+knitr::kable(by_class, caption = "By the class of the cluster favouring D")
+named = sim[gene_symbol %in% c("AIF1", "SELENOH", "EMP3"), .(events = .N, flagged = sum(outcome == "flagged"),
+                                                             exempt = sum(grepl("exempt", outcome)), retained = sum(outcome == "retained"),
+                                                             median_D_in_U_body = median(D_in_U_body),
+                                                             median_r_fav = median(r_fav, na.rm = TRUE)), by = .(dataset, gene_symbol)]
+knitr::kable(named, digits = 3, caption = "Showcase genes")
+mono = sim[dataset == "PBMC", .(events = .N, flagged = sum(outcome == "flagged"), exempt = sum(grepl("exempt", outcome))),
+           by = .(monocyte_favours_downstream = fav_class == "Monocyte / DC")]
+knitr::kable(mono, caption = "PBMC: events where a monocyte / DC cluster favours the downstream site")
+```
+
+```{r simulate_cage}
+cg = sim[cage %in% c("agrees", "disagrees"), .(events = .N, agree = mean(cage == "agrees"),
+                                                agree_strong = sum(cage == "agrees" & abs(cage_share_shift) >= 0.2),
+                                                disagree_strong = sum(cage == "disagrees" & abs(cage_share_shift) >= 0.2)),
+         by = .(dataset, outcome)][order(dataset, outcome)]
+knitr::kable(cg, digits = 2, caption = "CAGE direction agreement (events with CAGE at both sites and separable cell types) by outcome")
+cg2 = sim[, .(events = .N, no_CAGE_peak_at_a_site = sum(cage == "no CAGE peak at a site")), by = .(dataset, outcome)]
+knitr::kable(cg2[order(dataset, outcome)], caption = "Events lacking a CAGE peak at one of the two sites, by outcome")
+ex = sim[dataset == "ALS"][order(-obs_shift)][, .(gene_symbol, fav, oth, D_A, U_A, D_B, U_B, D_in_U_body, d_U, d_D,
+                                                   r_fav = round(r_fav, 3), obs_shift = round(obs_shift, 2),
+                                                   corr_shift = round(corr_shift, 2), outcome)]
+knitr::kable(head(unique(ex, by = "gene_symbol"), 15), caption = "ALS: largest observed shifts, one event per gene")
+```
+
+
+### For comparison: a cap-signature rule at the event sites
+
+The same events, classified by the G signature alone. "D uncapped-like" means the
+downstream site's G-signature rate is under a quarter of the upstream site's (at least 20
+reads each, upstream base not G). This is not part of the completeness threshold above.
+
+```{r cap_rule}
+capr = merge(sim, ev_sites[, .(dataset, U_site, D_site, U_G, U_n, D_G, D_n)], by = c("dataset", "U_site", "D_site"), all.x = TRUE)
+capr[, capclass := fcase(is.na(D_n) | D_n < 20 | is.na(U_n) | U_n < 20, "too few reads",
+                         D_G < 0.25 * U_G, "D uncapped-like", default = "D capped-like")]
+knitr::kable(capr[, .(events = .N, genes = uniqueN(gene_key), no_CAGE_peak_at_a_site = mean(cage == "no CAGE peak at a site"),
+                      CAGE_assessable = sum(cage %in% c("agrees", "disagrees")),
+                      CAGE_agree = mean(cage[cage %in% c("agrees", "disagrees")] == "agrees")),
+                  by = .(dataset, capclass)][order(dataset, capclass)], digits = 2)
+knitr::kable(capr[, .N, by = .(dataset, capclass, completeness_outcome = outcome)][order(dataset, capclass, completeness_outcome)],
+             caption = "Cap-signature class vs the completeness threshold's outcome")
+knitr::kable(unique(capr[gene_symbol %in% c("AIF1", "SELENOH", "EMP3"),
+                         .(gene_symbol, U_site, D_site, U_G = round(U_G, 2), U_n, D_G = round(D_G, 2), D_n, capclass)]))
+```
+
+## Notes
+
+- **Curves are means over genes, and only one TSS per gene is used.** A gene's own truncation
+  can differ from its cluster's curve; section B measures by how much. The threshold in D
+  uses only the cluster's curve.
+- **Distances come from reads, so the threshold can't see positional hotspots.** d_U and d_D
+  are aligned distances of the reads that start at U, which keeps the threshold independent of
+  annotation. Truncation hotspots, where reads pile up at a specific position (for example
+  ACTB near its 3' end), are not in a smooth curve. The threshold therefore under-predicts
+  truncation at such positions.
+- **Measurement only.** Nothing here changes LRAA's TSS calling or the site-usage results.

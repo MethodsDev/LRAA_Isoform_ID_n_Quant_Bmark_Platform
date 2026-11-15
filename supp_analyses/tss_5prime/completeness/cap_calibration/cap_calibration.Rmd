@@ -1,0 +1,601 @@
+---
+title: "Library-level calibration of the TSS cap signature"
+output: github_document
+---
+
+A read whose 5' end is a capped RNA end carries one more untemplated G than the library's
+uncapped reads (reverse transcriptase adds a C opposite the cap; `../cap_signature_other_datasets/`).
+LRAA v0.46.0 used that signature to prune TSSs that look like 5' truncation products, but
+decided *per splice graph* whether a library showed the signature at all. In the genome-wide
+FTD run that decision failed locally: one deep uncapped truncation pile-up (VIM) switched the
+rules off for a whole chunk strand, and small cell clusters had too few reads to decide.
+
+The fix being built for LRAA v0.47.0 decides once per **library**, before any chunking, from
+the distribution of capped fractions over all TSS peaks. This report shows that distribution
+for fourteen libraries, the decision the pre-pass makes from it, and how the FTD sites we know to
+be false look on it.
+
+Tables: `Makefile` here, running LRAA's own pre-pass module (`pylib/TSS_cap_calibration.py`),
+so peaks, read rules and the decision are exactly LRAA's.
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 11, dpi = 120)
+suppressPackageStartupMessages({ library(tidyverse); library(data.table); library(jsonlite) })
+pct = function(x, d = 1) ifelse(is.na(x), "", sprintf(paste0("%.", d, "f%%"), 100 * x))
+libs = tribble(~lib, ~label, ~platform,
+  "FTD", "FTD cortex nuclei", "sc Kinnex 10x 3'",
+  "PBMC", "PBMCs", "sc Kinnex 10x 3'",
+  "BT474", "BT474", "bulk PacBio",
+  "K562", "K562", "bulk PacBio",
+  "HG002", "HG002", "bulk PacBio",
+  "UHRR", "UHRR", "bulk PacBio",
+  "MCF7", "MCF7", "bulk ONT PCS109",
+  "A549", "A549", "bulk ONT PCS109",
+  "MORF_PB", "MORFs (PacBio)", "trimmed, no cap",
+  "MORF_ONT", "MORFs (ONT)", "trimmed, no cap",
+  "SIRV", "SIRV spike-ins (BT474 lib.)", "uncapped",
+  "SIRV_HG002", "SIRV spike-ins (HG002 lib.)", "uncapped",
+  "SIRV_UHRR", "SIRV spike-ins (UHRR lib.)", "uncapped",
+  "ARA", "Arabidopsis simulation", "simulated")
+libs$label = factor(libs$label, levels = libs$label)
+cal = map_dfr(libs$lib, function(l) {
+  j = fromJSON(sprintf("out/%s.TSS_cap_calibration.json", l))$stats
+  g = function(k) if (is.null(j[[k]])) NA else j[[k]]
+  tibble(lib = l, decision = g("decision"), baseline = g("baseline_G_run"), peaks_judged = g("peaks_judged"),
+         min_reads = g("peak_min_informative_reads"), uncapped_median = g("uncapped_mode_median"),
+         capped_median = g("capped_mode_median"), capped_mode_frac = g("capped_mode_frac"),
+         capped_mode_peaks = g("capped_mode_peaks"), separation = g("mode_separation"),
+         split = g("mode_split"), valley = g("valley"), off_peak = g("capped_off_peak"),
+         per_site = g("per_site_threshold"), reason = g("reason"))
+}) %>% left_join(libs, by = "lib")
+peaks = map_dfr(libs$lib, ~ fread(sprintf("out/%s.peaks.tsv.gz", .x))[, lib := .x]) %>% left_join(libs, by = "lib")
+MIN = cal$min_reads[1]
+judged = peaks %>% filter(n_informative >= MIN)
+human = c("FTD", "PBMC", "BT474", "K562", "HG002", "UHRR", "MCF7", "A549")
+```
+
+## Definitions
+
+- **Read start.** A primary alignment's 5' end on its transcribed strand (minimap2 `ts` tag,
+  LRAA's `transcribed_strand`). It counts only if its 5' soft clip is accounted for, as in LRAA's
+  `Pretty_alignment`: the clip is nothing but 1-3 G's, or ends in a run of at least 3 G's next
+  to the alignment (ONT: adapter + primer + G run).
+- **G run.** The run of G's in that clip touching the alignment, recorded before LRAA strips it.
+- **Informative.** A read whose genomic base just 5' of its start is not G (otherwise a capped
+  read's extra G aligns and the read shows nothing). Only spliced informative reads enter the
+  statistics: unspliced reads pile up at nuclear truncation points.
+- **Baseline and capped.** The baseline is the most common G run among informative starts away
+  from every peak (0 for sc Kinnex, 1 for bulk PacBio, 3 for ONT PCS109, whose primer carries
+  GGG). A read is *capped* when its G run exceeds the baseline.
+- **Peak.** A TSS candidate called as an LRAA graph build calls one: at least 5 read starts
+  pooled within 50 nt (`aggregate_sites_within_window`), at least 5x the median of its non-zero
+  neighbours within 50 nt (`filter_non_peaky_positions`). A peak's reads are the informative
+  spliced starts within 50 nt of it. Peaks with at least `r MIN` such reads are judged.
+
+## The baseline G run: evidence per library
+
+The baseline is not set by platform: each library's calibration measures it, as the most
+common G run among informative spliced read starts away from every peak. Two pieces of evidence
+that the measured value is right:
+
+```{r baseline_offpeak}
+offp = map_dfr(libs$lib, function(l) {
+  h = fromJSON(sprintf("out/%s.TSS_cap_calibration.json", l))$stats$G_run_off_peak
+  tibble(lib = l, G = as.integer(names(h)), n = unlist(h))
+}) %>% group_by(lib) %>% mutate(share = n / sum(n)) %>% ungroup() %>% left_join(libs, by = "lib")
+offp %>% filter(G <= 5) %>% mutate(cell = pct(share)) %>% select(label, platform, G, cell) %>%
+  pivot_wider(names_from = G, values_from = cell, names_prefix = "G run ", values_fill = "") %>%
+  left_join(cal %>% transmute(label, baseline = baseline), by = "label") %>%
+  knitr::kable(caption = "1. Off-peak informative spliced starts by 5' G run (share); the most common is the baseline")
+sh = function(l, g) { x = offp %>% filter(lib == l, G == g) %>% pull(share); if (length(x)) x else 0 }
+```
+
+**1. The off-peak distribution has one clear mode.** It is G run 0 for the sc Kinnex libraries
+(`r pct(sh("FTD", 0))` and `r pct(sh("PBMC", 0))` of off-peak starts), 1 for bulk PacBio
+(`r pct(sh("BT474", 1))`, `r pct(sh("K562", 1))`, `r pct(sh("HG002", 1))`, `r pct(sh("UHRR", 1))`
+for BT474, K562, HG002, UHRR) and 3 for ONT PCS109 (`r pct(sh("MCF7", 3))`,
+`r pct(sh("A549", 3))`). The next value up (1, 2 and 4 respectively) is the second most common
+because the off-peak pool also holds capped starts that were not called peaks (section 4).
+The SIRV spike-ins are an internal control: uncapped RNAs sequenced in the same bulk PacBio
+libraries. Their off-peak starts carry exactly one G in `r pct(sh("SIRV", 1))`,
+`r pct(sh("SIRV_HG002", 1))` and `r pct(sh("SIRV_UHRR", 1))` of reads (BT474, HG002, UHRR
+libraries), two in only `r pct(sh("SIRV", 2))`-`r pct(sh("SIRV_UHRR", 2))`; at their peaks (the spike-ins' real, uncapped 5' ends, figure below)
+reads carry zero or one G and almost never two. In BT474's own capped-mode peaks most reads
+carry two. So in this chemistry an uncapped end shows at most one G and the cap adds the second:
+the baseline of 1 is the library's background, not an artefact of capped reads in the pool. The
+likely source of that background G is an extra G in the bulk Kinnex PCR adapters (B. Haas,
+2026-10-29). The spike-ins carry it too, and the uncapped 5' ends show it on about half their
+reads, so it may not survive adapter trimming on every read. The calibration does not depend on
+the cause: it measures the baseline from each library's own reads.
+
+**2. Uncapped-mode peaks sit at the baseline; capped-mode peaks carry one G more.** The reads of
+the judged peaks, pooled by mode (split at each library's *t*), by G run:
+
+```{r baseline_modes, fig.height = 8}
+gcols = paste0("G", 0:8)
+prof = judged %>% left_join(cal %>% select(lib, split), by = "lib") %>%
+  mutate(mode = case_when(is.na(split) ~ "all judged peaks", capped_frac < split ~ "uncapped mode", TRUE ~ "capped mode")) %>%
+  select(lib, label, mode, all_of(gcols)) %>% pivot_longer(all_of(gcols), names_to = "G", values_to = "n") %>%
+  mutate(G = as.integer(sub("G", "", G))) %>% group_by(lib, label, mode, G) %>% summarise(n = sum(n), .groups = "drop") %>%
+  group_by(lib, label, mode) %>% mutate(share = n / sum(n)) %>% ungroup() %>% filter(G <= 6)
+bl = cal %>% select(label, baseline) %>% filter(!is.na(baseline))
+ggplot(prof, aes(G, share, fill = mode)) + geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_vline(data = bl, aes(xintercept = baseline), linetype = "dotted") +
+  scale_fill_manual(values = c("uncapped mode" = "grey55", "capped mode" = "darkorange", "all judged peaks" = "steelblue")) +
+  scale_x_continuous(breaks = 0:6) + facet_wrap(~ label, ncol = 5) +
+  labs(x = "5' G run of the read (dotted: the library's measured baseline)", y = "share of the peaks' informative reads", fill = NULL) +
+  theme_bw() + theme(legend.position = "bottom")
+```
+
+```{r baseline_modes_table}
+prof %>% left_join(cal %>% select(lib, baseline), by = "lib") %>%
+  filter(mode != "all judged peaks", G == baseline | G == baseline + 1) %>%
+  mutate(which = if_else(G == baseline, "at baseline", "baseline + 1"), cell = pct(share)) %>%
+  select(label, mode, which, cell) %>% pivot_wider(names_from = c(mode, which), values_from = cell) %>%
+  arrange(label) %>%
+  knitr::kable(caption = paste("2. Share of the peaks' reads at the baseline G run and one above it, by mode",
+                               "(for the MORFs, the SIRVs and the simulation the 'capped mode' is only their sparse tail; the decision is off)"))
+```
+
+In every library with the signature, the reads of uncapped-mode peaks are mostly at the baseline
+(the truncation products carry only the library's background G's), and the capped-mode peaks gain
+reads at exactly baseline + 1 (the extra G opposite the cap): 0 to 1 for sc Kinnex, 1 to 2 for
+bulk PacBio, 3 to 4 for ONT. Runs two or more above the baseline stay rare in both modes, so the
+signature is one G, not a general lengthening. In the libraries without the signature nearly
+all reads sit at the baseline; their few capped-looking peaks are the sparse tail the share
+floor rejects. This is the same one-G-over-baseline pattern measured at annotated
+TSSs against transcript bodies in `../cap_signature_other_datasets/`.
+
+The same data as enrichment: for each G run, the share of capped-mode reads with that run over
+the share of uncapped-mode reads with it (log2; 0 = the two modes alike). Libraries whose
+decision is on only: without the signature the "capped mode" is by construction the few peaks
+that happen to carry stray G's, set against an uncapped share near zero, so the ratio is large
+and meaningless there. G runs with fewer than 20 reads in either mode are left out.
+
+```{r baseline_enrichment, fig.height = 8}
+enr = prof %>% filter(mode != "all judged peaks") %>% select(lib, label, mode, G, n, share) %>%
+  pivot_wider(names_from = mode, values_from = c(n, share), values_fill = 0) %>%
+  filter(`n_capped mode` >= 20, `n_uncapped mode` >= 20) %>%
+  mutate(log2_enrichment = log2(`share_capped mode` / `share_uncapped mode`)) %>%
+  left_join(cal %>% select(lib, baseline, decision), by = "lib") %>% filter(decision == "on") %>%
+  mutate(rel = case_when(G == baseline ~ "baseline", G == baseline + 1 ~ "baseline + 1", TRUE ~ "other"))
+ggplot(enr, aes(G, log2_enrichment, fill = rel)) + geom_col(width = 0.75) + geom_hline(yintercept = 0) +
+  scale_fill_manual(values = c("baseline" = "grey55", "baseline + 1" = "darkorange", "other" = "grey80")) +
+  scale_x_continuous(breaks = 0:6) + facet_wrap(~ label, ncol = 3) +
+  labs(x = "5' G run of the read", y = "log2(capped-mode share / uncapped-mode share)",
+       fill = "G run relative to the library's measured baseline") +
+  theme_bw() + theme(legend.position = "bottom")
+```
+
+```{r baseline_enrichment_table}
+top = enr %>% group_by(label) %>% slice_max(log2_enrichment, n = 1, with_ties = FALSE) %>% ungroup() %>%
+  select(label, top_G = G)
+enr %>% filter(rel == "baseline + 1") %>% left_join(top, by = "label") %>%
+  transmute(library = label, decision, baseline, `baseline + 1` = G,
+            `capped / uncapped share` = sprintf("%.1fx", 2^log2_enrichment),
+            `most enriched G run` = top_G) %>% arrange(library) %>%
+  knitr::kable(caption = "Enrichment at baseline + 1, and the most enriched G run")
+```
+
+In every library with the signature, baseline + 1 is the most enriched G run
+(`r sprintf("%.0f", min(2^enr$log2_enrichment[enr$rel == "baseline + 1"]))`- to
+`r sprintf("%.0f", max(2^enr$log2_enrichment[enr$rel == "baseline + 1"]))`-fold: the cap's extra
+G), and the baseline itself is depleted. The next run up (baseline + 2) is enriched too, less
+strongly: some capped molecules carry two extra G's, as when reverse transcriptase adds two C's
+at the cap. Such reads are few (they barely show in the share plot above), which is why
+"capped" is defined as any run above the baseline rather than exactly one above it.
+
+
+## How the calibration works: algorithm and code walkthrough
+
+All of it lives in one LRAA module, `pylib/TSS_cap_calibration.py`. The steps, with the
+function that does each:
+
+```
+calibrate(bam, genome)                     # LRAA driver, or util/calibrate_TSS_cap_signature.py
+ ├─ scan(bam, genome, cpu)                 # one worker per contig (largest first), in parallel
+ │   └─ scan_contig(bam, genome, contig)   # both strands of one contig, one pass over its reads
+ │       ├─ for each primary read:         #   transcribed strand (Util_funcs.transcribed_strand)
+ │       │     _five_prime_start(read)     #   -> (5' position, G run or None, spliced?) or None
+ │       │       └─ five_prime_clip(clip)  #   the 5' soft-clip rule (same as Pretty_alignment)
+ │       ├─ peaks = LRAA's own TSS peak calling on all read starts of the strand
+ │       └─ returns, per strand: off-peak G-run counts, and G-run counts at each peak
+ ├─ decide(per_contig)                     # pools every contig strand -> one library answer
+ │   ├─ baseline   = most common G run among off-peak starts
+ │   ├─ fractions  = per peak: capped / informative (peaks with >= 20 informative reads)
+ │   ├─ split      = _split_two_modes(fractions)          # Otsu threshold
+ │   └─ decision   = on / off / undetermined (criteria below)
+ ├─ overrides_from(...)                    # -> LRAA config keys
+ └─ write_report / write_scan_table        # .json, .hist.tsv, .svg, .scan.tsv.gz
+```
+
+### Step 1: what one read contributes (`_five_prime_start`, `five_prime_clip`)
+
+For each primary alignment (mapping quality at least LRAA's `min_mapping_quality`):
+
+1. Its **transcribed strand** sets which end is 5': the left end on +, the right end on -.
+2. Its **5' soft clip** is read in the genomic frame (on - the 5' G run appears as C's at the
+   head of the right clip). The **G run** is the run of G's touching the alignment.
+3. The read's **5' end is trusted** -- taken as the first base of the molecule it came from --
+   only if the clip is accounted for, the rule `Pretty_alignment` applies before assembly: the
+   clip is nothing but 1-3 G's, or the G run next to the alignment is at least 3 (ONT: adapter +
+   primer + G run). Anything else (a clip with unexplained bases) means the true 5' end is not
+   known, and the read is skipped. A trusted 5' end is a real molecule end, not necessarily a
+   TSS: most trusted ends away from peaks are truncated or degraded molecules, which is why the
+   off-peak ones measure the uncapped baseline.
+4. It is **informative** only if the genomic base just upstream of the start is not G.
+   Otherwise a capped read's extra G matches the genome, aligns, and no clip is left to see.
+5. Only **spliced** reads enter the cap statistics (unspliced reads pile up at nuclear
+   truncation points); all accepted starts, spliced or not, are used to call peaks.
+
+Two different questions are asked of every read, and the libraries answer them differently
+because their reads arrive in different shapes. LRAA applies the same rules to every library
+and does not know the platform.
+
+- **Can the start be trusted?** (step 3) A clip of unexplained bases means the read may be
+  misaligned or truncated, so its start is not a transcript 5' end. The clip must be accounted
+  for. Kinnex and Iso-Seq reads arrive with the template-switch oligo already trimmed, so at
+  most the untemplated G's remain: the clip must be nothing but 1-3 G's. ONT PCS109 reads still
+  carry adapter + the strand-switching primer, whose 3' end is **GGG** (it anneals to the C's
+  reverse transcriptase adds at the RNA's end). So **>= 3 G's next to the alignment does not mean
+  capped**: it means the clip ends in the primer, the base after it is the true first base of
+  the cDNA, and the rest of the clip is adapter. Every strand-switched ONT read has those three
+  G's, capped or not.
+- **Is the read capped?** Decided against the library's baseline, the G count of its uncapped
+  starts: 0 for Kinnex, 1 for bulk PacBio (likely an extra G in the bulk Kinnex PCR adapters), 3 for ONT (the primer's
+  GGG). A capped end carries **one G more** than the baseline, from the C reverse transcriptase
+  adds opposite the cap.
+
+Examples (+ strand reads, LRAA defaults), each in the library type that produces it:
+
+| library (baseline) | 5' clip | G run | start trusted? | capped? |
+|---|---|---|---|---|
+| sc Kinnex (0) | (none) | 0 | yes | no |
+| sc Kinnex (0) | `G` | 1 | yes: the clip is all G | **yes** (1 > 0) |
+| sc Kinnex (0) | `GG` | 2 | yes: the clip is all G | **yes** |
+| sc Kinnex (0) | `A` | 0 | no: an unexplained base | (not counted) |
+| sc Kinnex (0) | `AG` | 1 | no: not all G, and fewer than 3 G's | (not counted) |
+| bulk PacBio (1) | `G` | 1 | yes | no (1 = baseline) |
+| bulk PacBio (1) | `GG` | 2 | yes | **yes** (2 > 1) |
+| ONT PCS109 (3) | adapter + `...GGG` | 3 | yes: the clip ends in the primer | no (3 = baseline) |
+| ONT PCS109 (3) | adapter + `...GGGG` | 4 | yes | **yes** (4 > 3) |
+| ONT PCS109 (3) | adapter + `...GG` | 2 | no: the clip does not end in the primer | (not counted) |
+
+An uncapped ONT end can still show a 4th G when only two of the primer's G's anneal to the
+three C's, leaving one C to template an extra G. That is why ONT's uncapped mode sits higher
+(section 1) and its two modes are closer together.
+
+`pylib/test_TSS_cap_calibration.py` checks that `five_prime_clip` gives the same G run and the
+same verdict as `Pretty_alignment` for these clips, on both strands.
+
+### Step 2: peaks and per-peak counts (`scan_contig`)
+
+Per contig strand, all accepted read starts go into a position counter, and peaks are called
+exactly as a splice-graph build calls TSS candidates:
+
+- `aggregate_sites_within_window`: positions with at least 5 starts pooled within 50 nt,
+  keeping the strongest position of each cluster;
+- `filter_non_peaky_positions`: a peak must have at least 5x the median count of its non-zero
+  neighbours within 50 nt (a sharp pile-up, not a smear).
+
+Each informative spliced start within 50 nt of a peak is counted for that peak by its G run
+(`G0`..`G8`); every other informative spliced start goes to the strand's **off-peak** counts.
+A worker returns only these counts, so the parent can pool contigs without the reads.
+
+### Step 3: the library decision (`decide`, `_split_two_modes`)
+
+```
+baseline   = argmax_g  off_peak_count[g]            # e.g. 0 Kinnex, 1 PacBio, 3 ONT
+for each peak with n = informative reads >= 20:
+    capped_frac = (reads with G run > baseline) / n
+if number of such peaks < 50:            -> undetermined   ("too few peaks to judge")
+
+t = Otsu threshold over capped_frac      # the cut t in 0.01..0.99 maximising
+                                         #   w_lo * w_hi * (mean_hi - mean_lo)^2
+lo = peaks with capped_frac <  t         # uncapped group
+hi = peaks with capped_frac >= t         # capped group
+share = |hi| / (|lo| + |hi|)
+sep   = median(hi) - median(lo)
+
+if share >= 0.10 and |hi| >= 50 and sep >= 0.20:   -> on
+elif share >= 0.10 and sep >= 0.20:                 -> undetermined   (clear but thin: |hi| < 50)
+else:                                               -> off
+```
+
+In the Otsu criterion, for a candidate threshold *t*:
+
+- **w_lo** is the fraction of judged peaks with capped fraction below *t*, and **mean_lo** their
+  mean capped fraction (the uncapped group);
+- **w_hi** = 1 - w_lo is the fraction at or above *t*, and **mean_hi** their mean (the capped
+  group).
+
+w_lo * w_hi * (mean_hi - mean_lo)^2 is the between-group variance written compactly. In full it
+is w_lo * (mean_lo - mu)^2 + w_hi * (mean_hi - mu)^2, each group's weight times the squared
+distance of its mean from the overall mean mu = w_lo * mean_lo + w_hi * mean_hi; substituting mu
+gives the compact form. The total variance of the peaks is fixed and equals this between-group
+part plus the within-group spread, so the *t* that maximises it is also the one leaving the two
+groups tightest, which is the valley of a bimodal histogram. The weights stop a cut that isolates
+a handful of extreme peaks from scoring well: w_lo * w_hi is largest for an even split and goes
+to 0 as either group empties.
+
+The **valley** reported alongside is the emptiest 2% histogram bin between the two medians;
+it is not used in the decision.
+
+`overrides_from` turns the answer into LRAA config keys: "on" or "off" sets
+`TSS_cap_signature` and `TSS_cap_G_baseline`, so every splice-graph build applies the
+library's answer and estimates nothing; "undetermined" sets nothing, and each graph build
+decides from its own reads as before (`TSS_cap_signature` "auto").
+
+### Worked example: FTD
+
+```{r otsu_ftd, fig.height = 3.6}
+f = sort(judged$capped_frac[judged$lib == "FTD"])
+otsu = tibble(t = (1:99) / 100) %>% rowwise() %>% mutate(
+  w_lo = mean(f < t), w_hi = 1 - w_lo,
+  m_lo = if (w_lo > 0) mean(f[f < t]) else NA, m_hi = if (w_hi > 0) mean(f[f >= t]) else NA,
+  between_var = w_lo * w_hi * (m_hi - m_lo)^2) %>% ungroup()
+ftd = cal %>% filter(lib == "FTD")
+p1 = ggplot(judged %>% filter(lib == "FTD"), aes(capped_frac)) + geom_histogram(binwidth = 0.02, boundary = 0, fill = "grey45") +
+  geom_vline(xintercept = ftd$split, colour = "darkgreen") + scale_y_log10() +
+  labs(x = "capped fraction", y = "peaks (log)", title = "FTD peaks and the Otsu split") + theme_bw()
+p2 = ggplot(otsu, aes(t, between_var)) + geom_line() + geom_vline(xintercept = ftd$split, colour = "darkgreen") +
+  labs(x = "candidate threshold t", y = "between-group variance", title = "Otsu: pick the t that maximises it") + theme_bw()
+suppressPackageStartupMessages(library(patchwork)); p1 + p2
+n_all = sum(peaks$lib == "FTD")
+```
+
+For FTD (`r n_all` peaks called genome-wide):
+
+1. **Baseline**: off-peak starts are mostly G run 0, so baseline = `r ftd$baseline`; a read
+   with one or more untemplated G's counts as capped.
+2. **Judged peaks**: `r ftd$peaks_judged` peaks have at least `r MIN` informative spliced reads.
+3. **Split**: the between-group variance peaks at t = `r ftd$split` (right panel). The curve
+   is nearly flat from about 0.1 to 0.35: so few peaks sit in the valley that any cut there
+   gives almost the same two groups, which is why the decision does not hinge on exactly
+   where the cut falls. Below it,
+   `r ftd$peaks_judged - ftd$capped_mode_peaks` peaks with median capped fraction
+   `r pct(ftd$uncapped_median)`; above it, `r ftd$capped_mode_peaks` peaks with median
+   `r pct(ftd$capped_median)`.
+4. **Criteria**: capped share `r pct(ftd$capped_mode_frac)` (needs >= 10%), capped-group peaks
+   `r ftd$capped_mode_peaks` (needs >= 50), separation `r round(ftd$separation, 2)`
+   (needs >= 0.20): all pass, so the decision is **`r ftd$decision`**, and every graph build gets
+   `TSS_cap_signature` "on" with `TSS_cap_G_baseline` `r ftd$baseline`.
+
+For the libraries without the signature, the split still finds a "capped" group (Otsu always
+splits), but it is a sparse tail of peaks with a few stray G's, so the share criterion fails:
+the Arabidopsis simulation's capped group is
+`r pct(cal$capped_mode_frac[cal$lib == "ARA"])` of its peaks
+(`r cal$capped_mode_peaks[cal$lib == "ARA"]` peaks; t = `r cal$split[cal$lib == "ARA"]`), the
+MORFs' `r pct(cal$capped_mode_frac[cal$lib == "MORF_PB"])` (PacBio) and
+`r pct(cal$capped_mode_frac[cal$lib == "MORF_ONT"])` (ONT): **off**. Their medians are far
+enough apart (separation `r round(cal$separation[cal$lib == "ARA"], 2)` for the simulation),
+so the share floor is what rejects them. The SIRVs of the BT474 library give only
+`r cal$peaks_judged[cal$lib == "SIRV"]` judged peaks: **undetermined**; those of the HG002 and
+UHRR libraries give `r cal$peaks_judged[cal$lib == "SIRV_HG002"]` and
+`r cal$peaks_judged[cal$lib == "SIRV_UHRR"]`, with modes only
+`r round(cal$separation[cal$lib == "SIRV_HG002"], 2)` and
+`r round(cal$separation[cal$lib == "SIRV_UHRR"], 2)` apart: **off**.
+
+The split *t* itself is not tested: it always lies between the two group medians, so with
+medians at least 0.20 apart it sits well above the uncapped mode. Measured, *t* is
+`r min(cal$split[cal$decision == "on"])`-`r max(cal$split[cal$decision == "on"])` where the
+decision is on, and `r min(cal$split[cal$decision == "off"], na.rm = TRUE)`-`r max(cal$split[cal$decision == "off"], na.rm = TRUE)`
+where it is off.
+
+### After the decision: the per-site rules
+
+The calibration only says whether the signature exists and what the baseline is. The rules that
+remove sites are unchanged, and use it per site (a site's informative reads within 50 nt):
+
+- **Pooled / basic runs** (`prune_uncapped_alt_TSS`): a TSS downstream of a capped TSS, on any
+  splice-graph path, is pruned when it has at least 5 informative reads and under 10% capped.
+  A gene's upstream-most TSS is never judged.
+- **Cluster runs** (`require_cap_for_new_TSS`, set by the single-cell workflow): a TSS not within
+  50 nt of a guide 5' end needs at least 5 informative reads, at least 2 capped, and at least 10%
+  capped.
+
+### Where it runs
+
+- **LRAA**: at the start of a discovery run with `TSS_cap_signature` "auto" (in chunked mode
+  after the library read count); the answer reaches every chunk worker with the forwarded config.
+  Quant-only runs skip it.
+- **Standalone**: `util/calibrate_TSS_cap_signature.py --bam --genome --output_prefix`, or
+  `--scan_table` to re-decide from a saved scan; it writes a `.config.json` for LRAA's
+  `--config_update`, with `TSS_cap_prepass` false so no later run re-calibrates on its own reads.
+- **WDL**: `LRAA.wdl` runs the standalone step once on the whole bam before sharding and merges
+  the answer into every shard's config; `LRAA-singlecell.wdl` hands the init run's answer to every
+  cluster run, so a cluster never decides from its own sparse reads.
+
+## 1. Per-peak capped fractions are bimodal when the library has the signature
+
+```{r hist_all, fig.height = 15}
+lines = cal %>% select(label, split, valley, per_site) %>% pivot_longer(-label, names_to = "line", values_to = "x") %>%
+  filter(!is.na(x)) %>%
+  mutate(line = recode(line, split = "Otsu split t", valley = "valley", per_site = "per-site threshold (10%)"))
+f3 = function(x) ifelse(is.na(x), "-", sprintf("%.2f", x))
+ann = cal %>% transmute(label, txt = ifelse(is.na(split),
+    sprintf("%s\n%s judged peaks\n%s", decision, peaks_judged, replace_na(reason, "")),
+    sprintf("%s\nt = %s\ncapped share %s (%s peaks)\nmedians %s / %s, sep %s",
+            decision, f3(split), pct(capped_mode_frac, 0), capped_mode_peaks,
+            pct(uncapped_median), pct(capped_median), f3(separation))))
+ggplot(judged, aes(capped_frac)) +
+  geom_histogram(binwidth = 0.02, boundary = 0, fill = "grey45") +
+  geom_vline(data = lines, aes(xintercept = x, linetype = line, colour = line)) +
+  geom_label(data = ann, aes(x = 1, y = Inf, label = txt), hjust = 1, vjust = 1.05, size = 2.6,
+             label.size = 0, fill = alpha("white", 0.85), inherit.aes = FALSE, lineheight = 0.95) +
+  scale_colour_manual(values = c("Otsu split t" = "darkgreen", "valley" = "steelblue", "per-site threshold (10%)" = "red3")) +
+  scale_linetype_manual(values = c("Otsu split t" = "solid", "valley" = "dotted", "per-site threshold (10%)" = "dashed")) +
+  scale_y_log10(expand = expansion(mult = c(0.05, 0.6))) + facet_wrap(~ label, ncol = 3, scales = "free_y") +
+  labs(x = "capped fraction of a peak's informative spliced read starts", y = "TSS peaks (log scale)",
+       colour = NULL, linetype = NULL,
+       title = sprintf("Peaks with >= %d informative spliced reads; label: the decision and the values it rests on", MIN),
+       subtitle = "on: capped share >= 10%, >= 50 capped-group peaks, medians >= 0.20 apart") +
+  theme_bw() + theme(legend.position = "bottom")
+```
+
+```{r cal_table}
+cal %>% transmute(library = label, platform, decision, `baseline G` = baseline, `peaks judged` = peaks_judged,
+                  `uncapped mode median` = pct(uncapped_median), `capped mode median` = pct(capped_median),
+                  `capped mode share` = pct(capped_mode_frac), separation = round(separation, 2),
+                  valley = valley, reason = replace_na(reason, "")) %>%
+  knitr::kable(caption = "LRAA's library decision (TSS_cap_calibration.decide)")
+```
+
+Every library made with template switching has two modes: peaks whose reads are almost never
+capped (uncapped-mode medians `r pct(min(cal$uncapped_median[cal$lib %in% human]))` to
+`r pct(max(cal$uncapped_median[cal$lib %in% human]))`), and peaks whose reads mostly are
+(capped-mode medians `r pct(min(cal$capped_median[cal$lib %in% human]))` to
+`r pct(max(cal$capped_median[cal$lib %in% human]))`). The libraries without the signature have
+one mode at zero. The ONT libraries' modes are broader and closer together, and their uncapped
+mode sits higher (`r pct(cal$uncapped_median[cal$lib == "MCF7"])` and
+`r pct(cal$uncapped_median[cal$lib == "A549"])`): an uncapped end can still carry a fourth G
+when only two of the primer's G's anneal.
+
+**The decision.** The fractions are split into two groups where they separate best (Otsu). The
+signature is present when the capped group holds at least 10% of the judged peaks and at least
+50 peaks, and its median exceeds the uncapped group's by at least 0.20. With fewer than 50
+judged peaks, or a clear but thin capped mode, the result is *undetermined*: nothing is set, and
+each graph build decides for itself as before. The MORF reads (5' ends trimmed upstream) show a
+sparse tail of capped-looking peaks (`r pct(cal$capped_mode_frac[cal$lib == "MORF_PB"])` of
+peaks) that the 10% floor rejects.
+
+**The valley** (emptiest 2% bin between the two medians) lies at or above the per-site threshold
+LRAA uses (`min_TSS_cap_frac` 10%) in every library with the signature, so the per-site rule
+cuts inside the uncapped mode's upper tail or at the valley, never into the capped mode.
+
+## 2. The capped mode is the CAGE-supported one
+
+```{r cage_hist, fig.height = 8}
+hj = judged %>% filter(lib %in% human) %>% mutate(CAGE = if_else(in_CAGE, "at a FANTOM5 CAGE peak (+-25 nt)", "no CAGE peak"))
+ggplot(hj, aes(capped_frac, fill = CAGE)) +
+  geom_histogram(binwidth = 0.02, boundary = 0, position = "identity", alpha = 0.6) +
+  facet_wrap(~ label, ncol = 3, scales = "free_y") +
+  labs(x = "capped fraction", y = "TSS peaks", fill = NULL) + theme_bw() + theme(legend.position = "bottom")
+```
+
+```{r cage_table}
+bands = c(0, 0.05, 0.10, 0.20, 1.0001)
+cage_tab = hj %>% mutate(band = cut(capped_frac, bands, right = FALSE,
+                                     labels = c("0-5%", "5-10%", "10-20%", ">=20%"))) %>%
+  group_by(label, band) %>% summarise(peaks = n(), in_CAGE = mean(in_CAGE), .groups = "drop")
+cage_tab %>% mutate(cell = sprintf("%d (%s)", peaks, pct(in_CAGE, 0))) %>% select(label, band, cell) %>%
+  pivot_wider(names_from = band, values_from = cell) %>%
+  knitr::kable(caption = "Peaks per capped-fraction band (share at a CAGE peak)")
+cg = function(l, b) cage_tab %>% filter(label == l, band == b) %>% pull(in_CAGE)
+lo_ftd = hj %>% filter(lib == "FTD", capped_frac < 0.05)
+```
+
+In FTD, `r pct(cg("FTD cortex nuclei", ">=20%"), 0)` of capped-mode peaks (>= 20%) sit at a
+CAGE peak, against `r pct(cg("FTD cortex nuclei", "0-5%"), 0)` of uncapped-mode peaks (< 5%);
+in PBMCs `r pct(cg("PBMCs", ">=20%"), 0)` against `r pct(cg("PBMCs", "0-5%"), 0)`. The
+uncapped-mode peaks that do overlap CAGE (`r sum(lo_ftd$in_CAGE)` in FTD) are probably FANTOM5's
+exon-internal peaks, common at recapping and cleavage sites: VIM's downstream site is one
+(0 capped of 108 informative reads, on a CAGE peak). The PBMC capped mode includes non-CAGE
+peaks (`r pct(1 - cg("PBMCs", ">=20%"), 0)`): capped starts FANTOM5 lacks, which the cap rule
+keeps.
+
+## 3. Sites known to be false sit with the transcript body
+
+The FTD event pairs (`ext/`, the v0.45.0 high-confidence TSS switches where a neuron cluster
+favours the downstream site, before any cap rule): the downstream sites are 5' truncation
+products by every other measure (no CAGE support, neuron nuclei's short reads; see
+`../../LRAA_paper-FTD_study/__Site_Usage_Analysis`). Their capped fractions, from the same
+read rules:
+
+```{r event_sites, fig.height = 4.5}
+ev = fread("out/FTD.event_site_caprates.tsv")[n_informative_spliced >= 20][, frac := n_capped_spliced / n_informative_spliced]
+body = map_dfr(c(FTD = "../ALS.capsig.tsv.gz", PBMC = "../PBMC.capsig.tsv.gz"), function(f) {
+  fread(f)[upstream_G == 0, .(reads = sum(reads)), by = .(five_class, clip)][, .(G_share = sum(reads[clip == "G"]) / sum(reads)), by = five_class]
+}, .id = "dataset")
+ev_s = ev[, .(sites = .N, median = median(frac), q25 = quantile(frac, .25), q75 = quantile(frac, .75),
+              le3 = sum(frac <= 0.03), ge10 = sum(frac >= 0.10)), by = role]
+U = ev_s[role == "U"]; Dn = ev_s[role == "D"]
+ftd_modes = cal %>% filter(lib == "FTD")
+ggplot(ev, aes(frac, fill = role)) + geom_histogram(binwidth = 0.02, boundary = 0, alpha = .7, position = "identity") +
+  geom_vline(xintercept = body$G_share[body$dataset == "FTD" & body$five_class == "body"], linetype = "dotted") +
+  scale_fill_manual(values = c(U = "steelblue", D = "darkorange"), labels = c(U = "upstream site (real)", D = "downstream site (false)")) +
+  labs(x = "capped fraction of informative spliced starts (dotted: FTD transcript-body rate)", y = "sites", fill = NULL) +
+  theme_bw() + theme(legend.position = "bottom")
+```
+
+| | sites | median capped | middle half | sites <= 3% | sites >= 10% |
+|---|---|---|---|---|---|
+| upstream (real) sites | `r U$sites` | `r pct(U$median)` | `r pct(U$q25)`-`r pct(U$q75)` | `r U$le3` | `r U$ge10` |
+| downstream (false) sites | `r Dn$sites` | `r pct(Dn$median)` | `r pct(Dn$q25)`-`r pct(Dn$q75)` | `r Dn$le3` | `r Dn$ge10` |
+| FTD transcript body | | `r pct(body$G_share[body$dataset == "FTD" & body$five_class == "body"], 2)` | | | |
+| FTD library: uncapped / capped mode median | | `r pct(ftd_modes$uncapped_median)` / `r pct(ftd_modes$capped_median)` | | | |
+
+The false downstream sites have the transcript body's cap rate and sit in the library's
+uncapped mode; their real upstream partners sit in the capped mode. The `r Dn$ge10` downstream
+sites at >= 10% are candidates for genuine alternative promoters, which the cap rule keeps.
+The body rates come from the 5' completeness tables (`../`; reads starting > 100 nt inside
+single-TSS genes): FTD `r pct(body$G_share[body$dataset == "FTD" & body$five_class == "body"], 2)`,
+PBMC `r pct(body$G_share[body$dataset == "PBMC" & body$five_class == "body"], 2)`.
+
+## 4. Why the decision does not use a non-peak background
+
+v0.46.x compared peaks against read starts away from every peak. That "background" is not
+uncapped: it holds real capped starts that were not called peaks.
+
+```{r strata}
+st = map_dfr(c(FTD = "out/FTD.chr19.offpeak_strata.tsv", PBMC = "out/PBMC.chr19.offpeak_strata.tsv",
+               BT474 = "out/BT474.chr19.offpeak_strata.tsv"), fread, .id = "library") %>%
+  mutate(capped = n_capped / n_informative)
+st %>% mutate(cell = sprintf("%s (%d)", pct(capped), n_informative)) %>%
+  select(library, distance_to_peak, reads_starting_at_position, cell) %>%
+  pivot_wider(names_from = library, values_from = cell) %>%
+  arrange(factor(distance_to_peak, levels = unique(c("at peak (<=50 nt)", "51-200 nt", "201-1000 nt", "1001-5000 nt", "5001-inf nt"))), reads_starting_at_position) %>%
+  knitr::kable(caption = "chr19: capped share of informative spliced starts (n reads), by distance to the nearest peak and by how many reads start at the same position")
+```
+
+Starts just outside a peak's 50 nt window are often capped (promoters spread their starts),
+and so are positions far from any peak where several reads start (real promoters the peak
+filter missed: broad, or lowly expressed). Even single starts far from any peak run above the
+transcript-body rate. The per-peak distribution needs no such background: the uncapped mode
+*is* the truncation background, measured where it matters.
+
+## 5. Sensitivity to the read floor for judged peaks
+
+```{r floors}
+fl = map_dfr(c(10, 20, 50), function(m) peaks %>% filter(n_informative >= m) %>% group_by(label) %>%
+  summarise(floor = m, peaks = n(), `< 10%` = mean(capped_frac < .10), `10-20%` = mean(capped_frac >= .10 & capped_frac < .20),
+            `>= 20%` = mean(capped_frac >= .20), .groups = "drop"))
+fl %>% filter(label %in% libs$label[libs$lib %in% c(human, "MORF_PB")]) %>%
+  mutate(across(c(`< 10%`, `10-20%`, `>= 20%`), ~ pct(.x))) %>% arrange(label, floor) %>%
+  knitr::kable(caption = "Share of peaks per band at three read floors")
+```
+
+The between-mode band stays thin at every floor; a lower floor adds binomial noise to both modes,
+a higher one drops the lowly expressed genes. LRAA uses `r MIN`.
+
+## Possible extension: a fitted mixture model (not pursued now)
+
+Recorded 2026-10-29 for later; the threshold rule above is kept for its simplicity. The
+per-peak counts (informative reads *n*, capped reads *k*) could be fitted with a
+two-component **beta-binomial mixture** (EM): the binomial part weighs each peak by its depth,
+the beta part allows real spread within a mode. It would give
+
+- a model-based library decision in place of the Otsu split: two components preferred over
+  one (BIC) *and* effect-size criteria on the fitted parameters (capped weight >= 10%, means
+  >= 0.20 apart, separation such as Ashman's D >= 2), since with thousands of peaks BIC alone
+  prefers two components for any heterogeneity (the MORF tail would pass);
+- per-site posteriors in place of the fixed 10% threshold: a site's probability of belonging
+  to the uncapped mode given its *n* and *k*. Thin sites (5 reads, none capped) would no longer
+  be pruned on weak evidence, and the cut would adapt per library (the ONT uncapped mode
+  reaches past 10%).
+
+First step if taken up: fit the mixture to these fourteen libraries' peak tables and compare its
+decisions with the table in section 1. Also recorded in LRAA `docs/TSS_cap_calibration.md`.
+
+## Caveats
+
+- **Mixed bams.** A bam merging libraries of different chemistries has more than one baseline
+  (sc Kinnex 0, PacBio bulk 1, ONT 3); one library-wide answer would be wrong for part of it.
+  None of our datasets is mixed.
+- **The genomic-G blind spot** is unchanged: a site whose genomic base just upstream is G has no
+  informative reads and is never judged per site.
+- **ONT** keeps more uncapped sites, because its uncapped mode reaches past the 10% per-site
+  threshold. A per-library threshold at the valley would fix that; it is reported here
+  (`valley`) but not used.
+
+Generated `r Sys.Date()` with LRAA's pre-pass module from the branch that becomes v0.47.0.

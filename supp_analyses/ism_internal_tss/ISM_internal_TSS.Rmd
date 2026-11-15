@@ -1,0 +1,365 @@
+---
+title: "Internal TSSs behind 5' fragment-shaped (ISM) isoforms, and the shorter proteins they imply"
+output: github_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, dpi = 110)
+suppressPackageStartupMessages({ library(tidyverse); library(knitr); library(patchwork) })
+ds_order <- c("PBMC", "ALS", "BT474", "K562", "HG002", "UHRR")
+s <- read_tsv("out/sites.tsv.gz", show_col_types = FALSE) %>% mutate(dataset = factor(dataset, ds_order))
+td <- read_tsv("out/tier_counts_dataset.tsv", show_col_types = FALSE) %>% mutate(dataset = factor(dataset, ds_order))
+tr <- read_tsv("out/tier_counts.tsv", show_col_types = FALSE)
+ab <- read_tsv("out/atlas_background.tsv", show_col_types = FALSE) %>% mutate(dataset = factor(dataset, ds_order))
+cc <- read_tsv("out/cap_context.tsv", show_col_types = FALSE) %>% mutate(off = off_cap / off_inf, on = on_cap / on_inf)
+exall <- read_tsv("out/examples/examples.tsv", show_col_types = FALSE, guess_max = 100)
+ex <- exall %>% filter(example != "ftd")   # the 10 examples; "ftd" is the Supp Fig's FTD example (bin/select_ftd_example.py)
+fcand <- read_tsv("out/examples/ftd_example_candidates.tsv", comment = "#", show_col_types = FALSE)
+nx <- read_tsv("out/next_candidates.tsv", show_col_types = FALSE, guess_max = 100)
+up <- read_tsv("out/uniprot_lost.tsv", show_col_types = FALSE)
+mod <- read_tsv("out/examples/models.tsv", show_col_types = FALSE)
+atl <- read_tsv("out/examples/atlas.tsv", show_col_types = FALSE)
+rd <- read_tsv("out/examples/reads.tsv.gz", show_col_types = FALSE, col_types = cols(capped = "c"))
+st <- read_tsv("out/examples/starts.tsv", show_col_types = FALSE)
+cm <- function(x) format(x, big.mark = ",", trim = TRUE)
+tv <- function(ds, tier, col = "peaks", cl = "strict_ISM") td %>% filter(dataset %in% ds, tier == .env$tier, class == cl) %>% pull(col) %>% sum()
+abv <- function(ds, stratum, col, window = 10, atlas = "CAGE") ab %>% filter(dataset == ds, stratum == .env$stratum, window == .env$window, atlas == .env$atlas) %>% pull(col)
+pct <- function(x) sprintf("%.0f%%", 100 * x)
+strict <- s %>% filter(class == "strict_ISM") %>% distinct(dataset, chrom, strand, peak, .keep_all = TRUE)
+qs <- read_tsv("out/qualifying_summary.tsv", show_col_types = FALSE)
+qual <- read_tsv("out/top_candidates.tsv", show_col_types = FALSE, guess_max = 100)
+all_q <- td %>% filter(tier == "core, N-truncated", class == "strict_ISM")
+```
+
+**The question.** Are there isoforms that look like 5' fragments of a longer isoform (ISM), but
+whose start is a real internal promoter, presumably giving a shorter protein?
+
+**Answer: yes, but few.** LRAA v0.51.0 models hold `r cm(tv("PBMC", "all", "pairs"))` strict ISM S/L pairs in PBMC
+and `r cm(tv("ALS", "all", "pairs"))` in ALS, at `r cm(tv("PBMC", "all"))` and `r cm(tv("ALS", "all"))` distinct TSSs. A sharp read pile-up, cap
+signature and CAGE or refTSS peak together hold at `r tv("PBMC", "core: pile-up+cap+atlas")` PBMC and `r tv("ALS", "core: pile-up+cap+atlas")` ALS TSSs. Of those, `r tv("PBMC", "core: pile-up+cap+atlas") - tv("PBMC", "core, not canonical TSS")` and `r tv("ALS", "core: pile-up+cap+atlas") - tv("ALS", "core, not canonical TSS")` are the gene's own canonical TSS,
+with L a longer upstream isoform, and many of the rest start in the 5'UTR and keep the coding
+start. `r tv("PBMC", "core, N-truncated")` PBMC and `r tv("ALS", "core, N-truncated")` ALS TSSs imply an N-terminally
+truncated protein, `r tv(c("BT474", "K562", "HG002", "UHRR"), "core, N-truncated")` more across the four bulk PacBio libraries (sites may repeat between
+libraries); together `r qs$peaks` distinct TSSs in `r qs$genes` genes. The method recovers COMT's textbook internal
+promoter (the soluble form), which is the best evidence that the rest of the list is worth reading. Most ISM S models are not of this kind: at uncapped pile-ups CAGE
+hits are at background (`r pct(abv("PBMC", "pile-up, measurable, not capped", "obs"))` vs `r pct(abv("PBMC", "pile-up, measurable, not capped", "bg"))` in PBMC, `r pct(abv("ALS", "pile-up, measurable, not capped", "obs"))` vs `r pct(abv("ALS", "pile-up, measurable, not capped", "bg"))` in ALS), against
+`r pct(abv("PBMC", "pile-up, capped", "obs"))` and `r pct(abv("ALS", "pile-up, capped", "obs"))` at capped ones.
+
+The paper's Supp Fig draws COMT, CORO1B and RECQL4 (chosen by the user) and an FTD example chosen by rule
+("The FTD example of the Supp Fig" below); choosing a figure gene is the user's decision. `candidates.tsv` has every pair.
+
+## Definitions
+
+- **S/L pair:** S's intron chain is a proper suffix of L's, in transcript sense: only L's 5'-most
+  introns are dropped. S keeps at least one intron. Pairs come from each dataset's basic and
+  cluster-guided GTFs, de novo and ref-guided, with both models in the same GTF. Isoforms are named by
+  splice hash, never by model ID. S models of one chain within 25 nt are one S TSS.
+- **Strict ISM:** S's 5' end lies in the L exon that ends at S's first donor. Since 2026-11-11 every pair also
+  requires a shared 3' end: S ends within 50 nt of an L model of the same model set (`FINDINGS_ism_survival.md`).
+  **TSS_in_L_intron** (novel first exon) and **TSS_past_L_exon** (reaches over an L exon) are counted
+  separately and left out of the strict counts.
+- **Site:** the commonest read start within 5 nt of S's TSS group, among reads whose first intron
+  is S's first intron (LRAA's read filters and 5' end rules), then +-5 nt around it. All evidence is
+  from the reads and atlases. LRAA having reported S counts for nothing, and its `TSS` flag is only
+  a descriptive column.
+
+Evidence, scored independently per S TSS:
+
+| evidence | passes when |
+|---|---|
+| pile-up | >= 5 reads at the site, >= 50% of the reads starting within 50 nt, >= 10% of reads using S's first intron |
+| cap | >= 5 informative reads, >= 2 capped, >= 10% capped (LRAA's per-site rule; `ev_cap_strong`: >= 30%). Capped = G run above the library baseline: 0 G for PBMC and ALS, 1 G for bulk PacBio. A read whose genomic base before the start is G says nothing about the cap |
+| atlas | same-strand FANTOM5 CAGE or refTSS v4.1 peak within 10 nt |
+| annotation | a GENCODE v47 transcript that is not `mRNA_start_NF` starts within 50 nt and shares S's first intron |
+| differential usage | a DEXSeq site event at the site (ref-guided site table, PBMC and ALS only); supporting only |
+
+The **core tier** is pile-up + cap + atlas. Background for the atlases: 10 random positions per S TSS
+in the same L exon, at least 10 nt from its edges and more than 50 nt from the site.
+
+## Where S's 5' ends lie
+
+```{r geometry, fig.width = 10, fig.height = 3.4}
+cl <- td %>% filter(tier == "all") %>% mutate(class = fct_rev(factor(class, c("strict_ISM", "TSS_in_L_intron", "TSS_past_L_exon"))))
+p1 <- ggplot(cl, aes(dataset, peaks, fill = class)) + geom_col(position = "fill") +
+  scale_fill_manual(values = c(strict_ISM = "#2171b5", TSS_in_L_intron = "#fdae61", TSS_past_L_exon = "#d9d9d9"), name = NULL) +
+  scale_y_continuous(labels = scales::percent) + labs(x = NULL, y = "share of distinct S TSSs") + theme_bw(base_size = 9)
+p2 <- strict %>% mutate(d = pmin(tss_into_exon, 500)) %>% ggplot(aes(d)) + geom_histogram(bins = 50, fill = "#2171b5") +
+  facet_wrap(~ dataset, nrow = 2, scales = "free_y") + labs(x = "strict ISM: S TSS, nt into the L exon (capped at 500)", y = "S TSSs") + theme_bw(base_size = 8)
+p1 + p2 + plot_layout(widths = c(1, 2))
+ae <- strict %>% summarise(f = mean(tss_into_exon <= 5 & !ev_pile & !lraa_TSS_flag)) %>% pull(f)
+```
+
+Strict ISM is the minority shape: most S models with a suffix chain carry a first exon that reaches
+into L's intron. Of the strict S TSSs, `r pct(ae)` sit within 5 nt of the L exon's first base with no
+pile-up and no LRAA `TSS` flag: a model starting at the graph's exon edge, not a site at all.
+
+## Cap signature and CAGE agree, and split the pile-ups in two
+
+```{r cap_cage, fig.width = 10, fig.height = 5}
+strict %>% filter(ev_pile, ev_cap_measurable) %>% mutate(atlas = if_else(cage_dist <= 10, "CAGE peak within 10 nt", "no CAGE peak")) %>%
+  ggplot(aes(cap_frac, fill = atlas)) + geom_histogram(binwidth = 0.05, boundary = 0) + facet_wrap(~ dataset, scales = "free_y", nrow = 2) +
+  geom_vline(xintercept = 0.1, linetype = 2, linewidth = 0.3) + scale_fill_manual(values = c("CAGE peak within 10 nt" = "#1a9850", "no CAGE peak" = "#fdae61"), name = NULL) +
+  labs(x = "capped fraction of informative reads at the site (dashed: 10%)", y = "strict ISM S TSSs with a read pile-up", title = "Pile-ups are capped and at CAGE, or uncapped and not at CAGE") +
+  theme_bw(base_size = 9) + theme(legend.position = "top")
+```
+
+```{r background, fig.width = 10, fig.height = 4.6}
+keep <- c("pile-up, capped", "no pile-up, capped", "pile-up, measurable, not capped", "pile-up, cap not measurable", "no pile-up, not capped")
+ab %>% filter(atlas == "CAGE", window == 10, stratum %in% keep) %>% mutate(stratum = factor(stratum, keep)) %>%
+  pivot_longer(c(obs, bg), names_to = "what", values_to = "rate") %>%
+  mutate(what = recode(what, obs = "at the site", bg = "random positions, same L exon")) %>%
+  ggplot(aes(dataset, 100 * rate, fill = what)) + geom_col(position = position_dodge(0.8), width = 0.75) + facet_wrap(~ stratum, nrow = 1) +
+  scale_fill_manual(values = c("at the site" = "#2171b5", "random positions, same L exon" = "#bdbdbd"), name = NULL) +
+  labs(x = NULL, y = "% with a CAGE peak within 10 nt", title = "CAGE at S TSSs against the background in the same exons") +
+  theme_bw(base_size = 8) + theme(axis.text.x = element_text(angle = 50, hjust = 1), legend.position = "top")
+```
+
+At capped pile-ups the CAGE hit rate is `r pct(min(ab$obs[ab$stratum == "pile-up, capped" & ab$window == 10 & ab$atlas == "CAGE"]))`-`r pct(max(ab$obs[ab$stratum == "pile-up, capped" & ab$window == 10 & ab$atlas == "CAGE"]))`, against a same-exon background of
+`r pct(min(ab$bg[ab$stratum == "pile-up, capped" & ab$window == 10 & ab$atlas == "CAGE"]))`-`r pct(max(ab$bg[ab$stratum == "pile-up, capped" & ab$window == 10 & ab$atlas == "CAGE"]))` (those exons are enriched for peaks: the same random draw over all S TSSs gives
+`r pct(min(ab$bg[ab$stratum == "all S TSSs" & ab$window == 10 & ab$atlas == "CAGE"]))`-`r pct(max(ab$bg[ab$stratum == "all S TSSs" & ab$window == 10 & ab$atlas == "CAGE"]))`). The cap and CAGE are independent measurements, one from the reads and one from FANTOM5,
+so this is the main result: an uncapped pile-up behaves as truncation and a capped one as a promoter.
+Off-peak read starts are `r pct(cc$off[cc$dataset == "PBMC"])` capped in PBMC and `r pct(cc$off[cc$dataset == "ALS"])` in ALS; at CAGE `r pct(cc$on[cc$dataset == "PBMC"])` and `r pct(cc$on[cc$dataset == "ALS"])`. The bulk
+libraries discriminate less well by this measure (off-peak `r pct(min(cc$off[cc$dataset %in% c("BT474", "K562", "HG002", "UHRR")]))`-`r pct(max(cc$off[cc$dataset %in% c("BT474", "K562", "HG002", "UHRR")]))`), because their reads are mostly full
+length and cell-line TSSs are not all in FANTOM5.
+
+Pile-ups whose cap cannot be measured (genomic G just before the start) are at CAGE at a rate of only
+`r pct(min(ab$obs[ab$stratum == "pile-up, cap not measurable" & ab$window == 10 & ab$atlas == "CAGE"]))`-`r pct(max(ab$obs[ab$stratum == "pile-up, cap not measurable" & ab$window == 10 & ab$atlas == "CAGE"]))`, so the blind spot is not hiding many promoters.
+
+## Tiers
+
+```{r tiers, fig.width = 10, fig.height = 4.6}
+tl <- c("all", "pile-up", "cap", "CAGE", "refTSS", "annotated start+intron", "pile-up+cap", "core: pile-up+cap+atlas", "core, not canonical TSS", "core, protein altered", "core, N-truncated")
+td %>% filter(class == "strict_ISM", tier %in% tl) %>% mutate(tier = factor(tier, rev(tl))) %>%
+  ggplot(aes(peaks, tier)) + geom_col(fill = "#2171b5") + geom_text(aes(label = cm(peaks)), hjust = -0.1, size = 2.5) +
+  facet_wrap(~ dataset, nrow = 1) + scale_x_log10(expand = expansion(mult = c(0, 0.5))) +
+  labs(x = "distinct strict ISM S TSSs (log scale; union of regimes)", y = NULL) + theme_bw(base_size = 8)
+tr %>% filter(class == "strict_ISM", tier %in% c("all", "pile-up+cap", "core: pile-up+cap+atlas", "core, protein altered", "core, N-truncated")) %>%
+  select(dataset, regime, tier, pairs, sites) %>% mutate(v = sprintf("%s (%s)", cm(pairs), cm(sites)), tier = factor(tier, c("all", "pile-up+cap", "core: pile-up+cap+atlas", "core, protein altered", "core, N-truncated")),
+                                                         dataset = factor(dataset, ds_order)) %>%
+  select(-pairs, -sites) %>% pivot_wider(names_from = tier, values_from = v) %>% arrange(dataset, regime) %>% kable(caption = "Strict ISM: S/L pairs (S TSSs)")
+```
+
+A "protein altered" or "N-truncated" count also needs at least 5 reads over the L intron S drops
+(`r tv("PBMC", "core, not canonical TSS")` of the `r tv("PBMC", "core: pile-up+cap+atlas")` PBMC core sites are away from a MANE/canonical coding TSS; the rest are the
+gene's main promoter, with L an upstream isoform such as a read-through).
+
+In the separate shape where S has a novel first exon in L's intron, the same tiers give
+`r tv("PBMC", "core: pile-up+cap+atlas", cl = "TSS_in_L_intron")` PBMC and `r tv("ALS", "core: pile-up+cap+atlas", cl = "TSS_in_L_intron")` ALS core TSSs, `r tv("PBMC", "core, N-truncated", cl = "TSS_in_L_intron")` and `r tv("ALS", "core, N-truncated", cl = "TSS_in_L_intron")` of them N-truncating. These are not strictly ISM and are not in
+the examples below; `candidates.tsv` has them (`class`).
+
+## Protein consequence
+
+```{r protein, fig.width = 10, fig.height = 3.6}
+pl <- c("N_truncated", "N_truncated_after_uORF", "frame_changed", "start_kept", "no_CDS_in_S", "L_noncoding", "L_unannotated_no_ORF")
+strict %>% filter(core, !s_at_canonical_tss) %>% mutate(protein_class = factor(protein_class, rev(pl))) %>% count(dataset, protein_class) %>%
+  ggplot(aes(n, dataset, fill = protein_class)) + geom_col() +
+  scale_fill_manual(values = c(N_truncated = "#1a9850", N_truncated_after_uORF = "#a6d96a", frame_changed = "#fdae61", start_kept = "#bdbdbd", no_CDS_in_S = "#969696", L_noncoding = "#d9d9d9", L_unannotated_no_ORF = "#f0f0f0"), name = NULL) +
+  labs(x = "core tier strict ISM TSSs, not at a canonical TSS", y = NULL) + theme_bw(base_size = 9)
+```
+
+L's CDS is GENCODE v47's when L's chain matches a coding transcript (MANE first, then canonical,
+then longest) and otherwise pyTD's (PyTransDecoder v0.4.0, `bin/run_orfs.py`, since 2026-11-04; was
+TransDecoder v6): the proteoform analysis's settings (`LRAA_proteoform_analyses/orf_settings.conf`:
+single best ORF >= 50 aa, DIAMOND homology to GENCODE v47 proteins at e-value 1e-5, target-decoy
+q <= 0.05 for ORFs without a hit), complete ORFs only; run only for L models whose S site has
+pile-up and cap evidence.
+`N_truncated`: L's ATG is lost and S's first ATG is in L's frame. `N_truncated_after_uORF`: a
+shorter out-of-frame ORF (< 30 aa) ends before the first in-frame ATG, so the truncated form needs
+reinitiation or leaky scanning. `frame_changed`: S's first ATG opens a different, longer ORF.
+`start_kept`: S starts in the 5'UTR and the protein is unchanged, which is not a qualifying case.
+
+## The 10 best examples
+
+Rule: core tier, N-terminal truncation, S away from a canonical TSS, at least 5 reads over L's
+dropped intron, L a GENCODE coding chain, at least 20 reads at the site. Evidence points: CAGE,
+refTSS, strong cap (>= 30%), pile-up, annotated start + intron, an annotated transcript using the
+same downstream ATG, a high-confidence DEXSeq event, and core status in 2 and in 3 libraries. Ties
+go to single-cell data, then cap fraction. Each is drawn from the library with the most reads
+at the site.
+
+```{r ex_table}
+ex %>% left_join(up %>% distinct(gene, .keep_all = TRUE) %>% select(gene, lost_features), by = "gene") %>%
+  transmute(ex = example, gene, `drawn from` = paste(dataset, regime), points = n_points, `reads at site` = n_site, `site % of intron reads` = round(100 * site_frac_of_intron_reads),
+            `capped %` = round(100 * cap_frac), `L junction reads` = l_up_junc_reads, CAGE = cage_dist, refTSS = reftss_dist, `core in` = core_datasets,
+            protein = sprintf("%d -> %d aa (%s)", aa_total, aa_remaining, protein_class), Kozak = kozak) %>% kable()
+ex %>% filter(!is.na(du_best)) %>% transmute(gene, `DEXSeq site events` = du_events, `high confidence` = du_HC_events, `largest event (supporting only)` = du_best) %>% kable()
+ex %>% left_join(up %>% distinct(gene, .keep_all = TRUE) %>% select(gene, lost_features), by = "gene") %>% filter(!is.na(lost_features)) %>%
+  transmute(gene, `UniProt features lost with the N-terminus` = lost_features) %>% kable()
+```
+
+Reading them (hand-written at LRAA v0.47.0; rechecked against the v0.50.0 tables on 2026-11-10, numbers inline):
+
+- **COMT** is a positive control: S gives soluble S-COMT (`r ex$aa_remaining[ex$gene == "COMT"]` aa) from the proximal promoter, and
+  L membrane-bound MB-COMT (`r ex$aa_total[ex$gene == "COMT"]` aa). The signal anchor in the lost `r ex$aa_lost[ex$gene == "COMT"]` aa is exactly the known difference.
+- **HTRA2**: the `r ex$aa_lost[ex$gene == "HTRA2"]` aa lost include the transit peptide, propeptide and transmembrane anchor, and
+  the downstream ATG is `r ex$aa_lost[ex$gene == "HTRA2"] + 1 - 134` aa past the N-terminus of the mature protein (residue 134). Whether anything stable is
+  made is an open question. The site is `r ex$tss_into_exon[ex$gene == "HTRA2"]` nt into the L exon and takes only `r pct(ex$site_share_vs_L[ex$gene == "HTRA2"])` of reads against L, so it is a
+  minor start at an exon edge, though capped and at CAGE in `r ex$n_core_datasets[ex$gene == "HTRA2"]` libraries.
+- **BTBD8** is drawn from ALS with `r pct(ex$fragile_share[ex$gene == "BTBD8"])` of its site reads from neurons, the cell types with the known truncation
+  artefact, and loses both BTB domains; its annotated start and cap keep it here, but it is the
+  example to distrust most. It was the Supp Fig's FTD example until 2026-11-08 (see below).
+- **GGA1** would lose `r ex$aa_lost[ex$gene == "GGA1"]` of `r ex$aa_total[ex$gene == "GGA1"]` aa, leaving a fragment; a transcript start, not obviously a stable protein.
+- History: at v0.47.0 the ten also held MBP (the classic MBP promoter downstream of Golli-MBP) and FLNA. At v0.50.0 MBP
+  has no S/L pair (the Golli-MBP L model, whose whole intron chain no read carries, is not kept by v0.50.0's reference
+  rule) and FLNA no longer has a pair that passes the example rule.
+
+```{r helpers}
+cols <- c("site, capped" = "#1a9850", "site, not capped" = "#d7301f", "site, no cap information" = "#bdbdbd", "starts elsewhere" = "#fdae61", "through L's intron" = "#c6dbef")
+compressor <- function(segs, sgn, gap = 120) {
+  s <- segs %>% arrange(start) %>% mutate(g = cumsum(start > lag(cummax(end), default = first(start)))) %>% group_by(g) %>% summarise(a = min(start), b = max(end), .groups = "drop")
+  ga <- c(); pa <- c(); pos <- 0
+  for (i in seq_len(nrow(s))) { if (i > 1) pos <- pos + min(gap, s$a[i] - s$b[i - 1]); ga <- c(ga, s$a[i], s$b[i]); pa <- c(pa, pos, pos + s$b[i] - s$a[i]); pos <- pos + s$b[i] - s$a[i] }
+  f <- approxfun(ga, pa, rule = 2)
+  if (sgn > 0) f else function(v) -f(v)
+}
+plot_example <- function(id) {
+  e <- exall %>% filter(example == id); sgn <- ifelse(e$strand == "+", 1, -1)
+  m <- mod %>% filter(example == id); ex_m <- m %>% filter(kind %in% c("exon", "cds"))
+  a <- rd %>% filter(example == id) %>% mutate(class = case_when(at_site & rclass != "through L intron" & capped == "True" ~ "site, capped", at_site & rclass != "through L intron" & capped == "False" ~ "site, not capped",
+      at_site & rclass != "through L intron" ~ "site, no cap information", rclass == "through L intron" ~ "through L's intron", TRUE ~ "starts elsewhere"))
+  thin <- function(d, n) if (nrow(d) > n) d %>% arrange(start5) %>% slice(unique(round(seq(1, n(), length.out = n)))) else d
+  r <- bind_rows(a %>% filter(str_starts(class, "site")) %>% group_by(class) %>% group_modify(~ thin(.x, 30)) %>% ungroup(), thin(a %>% filter(class == "starts elsewhere"), 15), thin(a %>% filter(class == "through L's intron"), 15))
+  fx <- compressor(ex_m %>% select(start, end) %>% distinct(), sgn)
+  u <- max(2, nrow(r) / 14)   # track spacing scales with the read rows
+  trk <- m %>% filter(kind == "exon") %>% distinct(track) %>% mutate(track = factor(track, c("L", "S", "GENCODE S chain"))) %>% arrange(track) %>% mutate(y = -u * row_number(), lab = as.character(track))
+  bl <- r %>% mutate(row = min(trk$y) - u - row_number()) %>% separate_rows(blocks, sep = ";") %>% separate(blocks, c("a", "b"), sep = "-", convert = TRUE) %>% filter(b >= min(ex_m$start) - 2000, a <= max(ex_m$end) + 2000)
+  sp <- bl %>% group_by(row, class) %>% summarise(a = min(a), b = max(b), .groups = "drop")
+  xm <- ex_m %>% mutate(track = as.character(track)) %>% left_join(trk %>% transmute(track = lab, y), by = "track")
+  xs <- xm %>% group_by(track, y) %>% summarise(a = min(start), b = max(end), .groups = "drop")
+  atg <- m %>% filter(kind == "site")
+  p1 <- ggplot() + geom_segment(data = sp, aes(fx(a), row, xend = fx(b), yend = row, colour = class), linewidth = 0.15) +
+    geom_segment(data = bl, aes(fx(a), row, xend = fx(b), yend = row, colour = class), linewidth = 0.9) +
+    geom_segment(data = xs, aes(fx(a), y, xend = fx(b), yend = y), linewidth = 0.2) +
+    geom_rect(data = xm %>% filter(kind == "exon"), aes(xmin = fx(start), xmax = fx(end), ymin = y - 0.2 * u, ymax = y + 0.2 * u), fill = "white", colour = "black", linewidth = 0.2) +
+    geom_rect(data = xm %>% filter(kind == "cds"), aes(xmin = fx(start), xmax = fx(end), ymin = y - 0.3 * u, ymax = y + 0.3 * u), fill = "#2171b5", linewidth = 0) +
+    geom_point(data = atg %>% mutate(y = trk$y[1]), aes(fx(start), y + 0.5 * u, shape = label), size = 1.6) + scale_shape_manual(values = c("L ATG" = 25, "S ATG" = 17), name = NULL) +
+    geom_vline(xintercept = fx(e$peak), linetype = 2, linewidth = 0.3, colour = "#1a9850") + scale_colour_manual(values = cols, drop = FALSE, name = NULL) +
+    scale_y_continuous(breaks = trk$y, labels = trk$lab) +
+    labs(x = "transcript 5' -> 3' (nt; gaps between exons compressed)", y = NULL, title = sprintf("%s  %s  %s:%d (%s)  %s %s; S %s, L %s; %d -> %d aa", id, e$gene, e$chrom, e$peak, e$strand, e$dataset, e$regime, str_sub(e$s_hash, 1, 8), str_sub(e$l_hash, 1, 8), e$aa_total, e$aa_remaining)) +
+    theme_bw(base_size = 8) + theme(panel.grid = element_blank(), legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+  rel <- function(v) (v - e$peak) * sgn
+  s2 <- st %>% filter(example == id) %>% mutate(x = rel(pos)) %>% filter(abs(x) <= 200) %>% transmute(x, capped = cap, `not capped` = inf - cap, `no cap information` = n - inf) %>% pivot_longer(-x) %>%
+    mutate(name = factor(name, c("no cap information", "not capped", "capped")))
+  ax <- atl %>% filter(example == .env$id) %>% mutate(x1 = pmin(rel(start), rel(end)), x2 = pmax(rel(start), rel(end))) %>% filter(x2 >= -200, x1 <= 200)
+  top <- max(1, s2 %>% group_by(x) %>% summarise(v = sum(value)) %>% pull(v))
+  p2 <- ggplot() + geom_col(data = s2, aes(x, value, fill = name), width = 1) + scale_fill_manual(values = c(capped = "#1a9850", `not capped` = "#d7301f", `no cap information` = "#bdbdbd"), name = NULL) +
+    geom_rect(data = ax, aes(xmin = pmax(x1, -200), xmax = pmin(x2, 200), ymin = if_else(atlas == "CAGE", -0.11, -0.22) * top, ymax = if_else(atlas == "CAGE", -0.03, -0.14) * top), fill = "black") +
+    geom_vline(xintercept = rel(c(e$l_exon_lo, e$l_exon_hi)), linetype = 3, linewidth = 0.3) +
+    coord_cartesian(xlim = c(-200, 200)) + labs(x = "nt from the site, transcript sense (bars below 0: CAGE, then refTSS; dotted: L exon edges)", y = "read starts over S's first intron") +
+    theme_bw(base_size = 8) + theme(panel.grid = element_blank(), legend.position = "right")
+  p1 / p2 + plot_layout(heights = c(2.2, 1))
+}
+```
+
+```{r examples, results = "asis", fig.width = 11, fig.height = 7}
+for (id in ex$example) { e <- ex %>% filter(example == id); cat(sprintf("\n\n### %s\n\n", e$gene)); print(plot_example(id)); cat("\n\n") }
+```
+
+## The FTD example of the Supp Fig
+
+```{r ftd_pick}
+f1 <- fcand %>% filter(passes) %>% slice(1)
+```
+
+The supplementary figure's FTD panel (since 2026-11-04, replacing MBP) comes from a rule, not a hand pick
+(`bin/select_ftd_example.py`): (1) an FTD core internal TSS (pile-up, cap signature, CAGE or refTSS), strict ISM,
+not canonical, at least 5 reads over L's dropped intron; (2) an N-terminally truncated S protein; (3) both L and
+S with full-chain (FSM) read support, i.e. at least one read of the FTD BAM whose intron chain is the model's
+whole chain; (4, since 2026-11-08, after BTBD8, whose L 5' end had 2 such reads) L's CDS from GENCODE, and at least
+10 reads starting within 50 nt of L's TSS that fit L (its first introns, in order, and a 3' end in the matching L
+exon). Ranked by reads at the site, then by the smaller FSM count; one L/S pair per gene. All
+`r nrow(fcand)` FTD sites that meet rules 1 and 2 are listed; `r sum(fcand$passes)` also `r ifelse(sum(fcand$passes) == 1, "passes", "pass")` rules 3 and 4.
+The top one is **`r f1$gene`** (`r f1$regime`, `r f1$arms`): `r f1$n_site` reads at the site,
+`r pct(f1$cap_frac)` capped, FSM reads `r f1$L_fsm_reads` for L and `r f1$S_fsm_reads` for S, `r f1$L_tss_reads` reads starting at L's TSS,
+`r f1$aa_total` -> `r f1$aa_remaining` aa (L's CDS from `r f1$cds_route`), with `r pct(f1$fragile_share)` of the
+site reads from neuron clusters, the cell types with the 5' truncation artefact.
+
+```{r ftd_table}
+fcand %>% transmute(rank, passes, gene, regime, `reads at site` = n_site, `capped %` = round(100 * cap_frac), `L junction reads` = l_up_junc_reads,
+                    `L FSM reads` = L_fsm_reads, `S FSM reads` = S_fsm_reads, `reads at L's TSS` = L_tss_reads, protein = sprintf("%d -> %d aa (%s)", aa_total, aa_remaining, protein_class),
+                    `L CDS` = cds_route, `neuron %` = round(100 * fragile_share)) %>% kable()
+```
+
+```{r ftd_plot, fig.width = 11, fig.height = 7}
+plot_example("ftd")
+```
+
+## Do the tools keep these sites?
+
+Each tool is judged on its own strict ISM isoforms (`bin/tool_own_ism.py`, the Supp Fig's panel c since 2026-11-10): in each
+bulk library, the tool's de novo models S that are strict ISMs of a longer model L of the same tool or of GENCODE v47, with
+>= 5 reads over L's dropped intron and S's start not a canonical TSS. Pairs and site evidence come from the pool tables
+(`bin/make_pool_gtf.py` pools every tool's models with GENCODE, and the same read and atlas rules score the pool); a pair
+counts for a tool when the tool has a model with S's chain starting in S's TSS group and has L's chain (or GENCODE does).
+Each start (site + S's first intron) is **supported** (pile-up, cap signature, CAGE or refTSS peak), **truncation-like**
+(pile-up of >= 5 informative reads, no cap signature, no atlas peak) or **not judged** (too few reads, or mixed evidence).
+Cap evidence is LRAA's own signal, so CAGE and
+refTSS agreement is the independent part.
+
+```{r tool_own_ism, fig.width = 6, fig.height = 4.5}
+ti <- read_tsv("out/tool_own_ism.pooled.tsv", show_col_types = FALSE)
+tiv <- function(tool, col) ti[[col]][ti$tool == tool]
+ggplot(ti, aes(pct_truncation_of_judged, supported, label = tool)) + geom_point(aes(size = ism_isoforms, colour = tool == "LRAA"), alpha = 0.8) +
+  ggrepel::geom_text_repel(size = 3, box.padding = 0.5, point.padding = 0.5) +
+  scale_colour_manual(values = c(`TRUE` = "#d95f02", `FALSE` = "grey50"), guide = "none") +
+  scale_size(trans = "log10", range = c(1, 8), breaks = c(1e3, 1e4, 1e5), labels = scales::comma, name = "ISM isoforms") + scale_x_continuous(limits = c(0, 100)) + scale_y_log10() +
+  labs(x = "truncation-like starts (% of judged; lower is better)", y = "supported internal TSSs (higher is better)") + theme_bw()
+kable(ti %>% arrange(desc(supported)) %>% transmute(tool, `ISM isoforms` = cm(ism_isoforms), starts = cm(starts), supported, `truncation-like` = cm(truncation_like),
+                                          `not judged` = cm(other), `truncation-like % of judged` = round(pct_truncation_of_judged, 1)),
+      caption = "Four bulk libraries pooled. supported: higher is better; truncation-like % of judged: lower is better; not judged: no verdict either way.")
+```
+
+Most starts of every tool are not judged (`r round(100 * min(ti$other / ti$starts))`-`r round(100 * max(ti$other / ti$starts))`%). Of the
+judged starts, `r round(tiv("LRAA", "pct_truncation_of_judged"), 1)`% of LRAA's are truncation-like, with `r tiv("LRAA", "supported")` supported internal TSSs
+from `r cm(tiv("LRAA", "ism_isoforms"))` ISM isoforms. IsoSeq has more supported sites (`r tiv("IsoSeq", "supported")`) but from `r cm(tiv("IsoSeq", "ism_isoforms"))` ISM
+isoforms, `r round(tiv("IsoSeq", "pct_truncation_of_judged"), 1)`% of its judged starts truncation-like. Mandalorion, Bambu and ESPRESSO keep most truncation
+products (`r round(min(ti$pct_truncation_of_judged[ti$tool %in% c("Mandalorion", "Bambu", "ESPRESSO")]), 1)`-`r round(max(ti$pct_truncation_of_judged[ti$tool %in% c("Mandalorion", "Bambu", "ESPRESSO")]), 1)`%); StringTie and IsoQuant have lower shares but few ISM isoforms and few supported sites.
+
+History (v0.50.0, until 2026-11-10): the comparison scored every tool on shared pool targets (`bin/tool_recall.py`,
+`out/tool_recall.tsv`). Most of those targets existed only as IsoSeq models (84% of the uncapped pile-up targets), so it was
+replaced; scored leave-one-out, its tool positions did not change.
+
+## The next candidates
+
+```{r next}
+nx %>% head(20) %>% transmute(gene, `drawn from` = paste(dataset, regime), points = n_points, `reads at site` = n_site, `capped %` = round(100 * cap_frac), `core in` = core_datasets,
+                              protein = sprintf("%d -> %d aa (%s)", aa_total, aa_remaining, protein_class), Kozak = kozak) %>% kable()
+```
+
+## Truncation and the ALS neurons
+
+```{r neurons, fig.width = 8, fig.height = 3}
+n <- strict %>% filter(dataset %in% c("PBMC", "ALS"), ev_pile, ev_cap_measurable) %>% mutate(g = if_else(ev_cap, "capped", "not capped"), d = recode(as.character(dataset), PBMC = "PBMC: share of site reads from monocytes", ALS = "ALS: share of site reads from neurons"))
+ggplot(n, aes(fragile_share, fill = g)) + geom_histogram(bins = 20, position = "identity", alpha = 0.6) + facet_wrap(~ d, scales = "free_y") + scale_fill_manual(values = c(capped = "#1a9850", "not capped" = "#d7301f"), name = NULL) +
+  labs(x = "share of site reads", y = "strict ISM pile-ups") + theme_bw(base_size = 9)
+ns <- n %>% group_by(dataset, g) %>% summarise(m = median(fragile_share, na.rm = TRUE), .groups = "drop")
+```
+
+ALS has `r sum(n$dataset == "ALS" & n$g == "not capped")` uncapped pile-ups against `r sum(n$dataset == "ALS" & n$g == "capped")` capped ones, the highest ratio here, as the known truncation
+artefact predicts. The neuron share of reads is `r pct(ns$m[ns$dataset == "ALS" & ns$g == "not capped"])` at the uncapped and `r pct(ns$m[ns$dataset == "ALS" & ns$g == "capped"])` at the capped ones (medians).
+Only `r tv("ALS", "core, N-truncated")` ALS TSSs reach the N-truncated tier.
+
+## Caveats
+
+- The cap test is on the reads at the site, not on any one transcript's protein. A capped start at
+  CAGE supports a transcript start; none of this shows the truncated protein is made. No ribosome
+  or mass-spectrometry data were used.
+- CAGE tags can also come from recapped RNA, which would pass both the cap and CAGE tests.
+- Since v0.46.0, LRAA prunes uncapped downstream TSSs, and the single-cell workflow's cluster runs require a cap for new TSSs, so
+  the S models with a `TSS` flag have already survived a cap filter. Ref-guided annotation-seeded
+  TSSs are not judged. The tiers re-measure the cap, but the input set is enriched for capped S:
+  of ALS S TSSs with a measurable cap, `r pct(mean(s$ev_cap[s$dataset == "ALS" & s$regime == "denovo" & s$class == "strict_ISM" & s$ev_cap_measurable]))` pass de novo and `r pct(mean(s$ev_cap[s$dataset == "ALS" & s$regime == "refGuided" & s$class == "strict_ISM" & s$ev_cap_measurable]))` ref-guided.
+- The pile-up rule needs 10% of the reads over S's first intron, which can miss a real weak promoter
+  in a gene dominated by truncated reads, most of all in ALS.
+- `protein_class` is scanning-model logic from sequence: first ATG, no leaky-scanning or
+  non-AUG starts. An `after_uORF` class depends on reinitiation. The ORF route gives
+  less secure L proteins than the GENCODE route; all 10 examples use GENCODE. CDS comparison is
+  to L, so if L is itself a minor isoform (as Golli-MBP was for MBP at v0.47.0) "truncated" says little about the main form.
+- Annotation is GENCODE v47; the single-cell site work used v22 for its gene spans. Bulk reads are
+  the same libraries as the benchmarks, and the bulk LRAA runs used those BAMs.
+- UniProt features were read only for these genes, and apply only where the canonical length equals
+  L's CDS length (`out/uniprot_lost.tsv`).
+- The cap signature is present in all six libraries used (calibrated: 0 G baseline for PBMC and ALS,
+  1 G for bulk PacBio). It does not apply to SIRV spike-ins (uncapped), and MORF read clips are
+  trimmed upstream, so those were not used. The SG-NEx ONT libraries have it at a 3 G baseline
+  but were left out here.

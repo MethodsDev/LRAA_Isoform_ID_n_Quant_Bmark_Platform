@@ -26,7 +26,7 @@ mouse_pearson_cor_df %>% head()
 
 ```{r}
 # rank according to mean cor val
-pearson_cor_df_ranking = mouse_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+pearson_cor_df_ranking = mouse_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 mouse_pearson_cor_df$name = factor(mouse_pearson_cor_df$name, levels=pearson_cor_df_ranking)
@@ -61,7 +61,7 @@ mouse_spearman_cor_df %>% head()
 
 ```{r}
 # rank according to mean cor val
-spearman_cor_df_ranking = mouse_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+spearman_cor_df_ranking = mouse_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 mouse_spearman_cor_df$name = factor(mouse_spearman_cor_df$name, levels=pearson_cor_df_ranking)
@@ -182,8 +182,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -584,7 +588,7 @@ mouse_oarfish_metric_rankings = mouse_oarfish_metrics_long %>%
   mutate(
     metric_rank = if_else(
       direction == "higher is better",
-      min_rank(dplyr::desc(metric_value)),
+      min_rank(desc(metric_value)),
       min_rank(metric_value)
     )
   ) %>%

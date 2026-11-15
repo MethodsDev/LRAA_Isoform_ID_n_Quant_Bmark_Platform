@@ -4,79 +4,92 @@ output: github_document
 date: "2025-02-17"
 ---
 
+Reference-guided isoform identification accuracy on the PacBio cell lines
+(BT474, K562, HG002, UHRR), reported at two accuracy levels.
+
+| Level | Source table | Universe scored |
+|---|---|---|
+| **Expressed** | `refguided_expressed_accuracy_summary.tsv` | every proxy-expressed reference chain: provided + held-out. Shares its universe with the de novo regime, so it is the cross-regime comparable number. |
+| **Novel** | `refguided_accuracy_summary.tsv` | the held-out subset only. This is the primary result for reference-guided isoform discovery. |
+
+The two source tables reuse the same `Metric` names for different quantities, so
+the mapping below is deliberate rather than incidental:
+
+| `Metric` column | in the expressed table | in the novel table |
+|---|---|---|
+| `knownTPR` | **recall** over the expressed universe | provided-model recall, an unscored diagnostic |
+| `novelTPR` | `NA` for every entry | **recall** over the held-out universe |
+| `novelFDR` | 1 - precision | 1 - precision |
+
+Reading recall from the wrong column yields an all-`NA` row that renders as a
+blank band in the heatmaps, so the setup chunk re-derives F1 from the mapped
+precision and recall and stops the render if they disagree.
+
+Figures are written to `Cell_lines_summary.<level>.pdf` and
+`Cell_lines_summary.latest_tools.<level>.pdf`.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(cowplot)
 ```
 
 ```{r}
 
-df = read.csv("refguided_accuracy_summary.tsv", header=T, sep="\t")
+# The two source tables put recall in DIFFERENT columns, and each carries a
+# column that means something else entirely in the other table:
+#
+#   expressed table: recall = knownTPR ; novelTPR is NA for every entry
+#   novel table:     recall = novelTPR ; knownTPR is the provided-model recall,
+#                    an unscored diagnostic, NOT a recall over this universe
+#
+# So the recall column is a parameter, and F1 is re-derived below as a guard.
+read_level = function(path, level, recall_metric) {
+  d = read.csv(path, header=T, sep="\t")
+  d$data_name = str_replace(d$data_name, "CL_", "")
+  d$data_name = str_replace(d$data_name, "_human", "")
+  d %>%
+    separate_wider_delim(data_name, "_", names=c("cell_line", "replicate")) %>%
+    select(cell_line, replicate, Program, Metric, Value) %>%
+    rename(Tool = Program) %>%
+    spread(key=Metric, value=Value) %>%
+    mutate(Recall = .data[[recall_metric]], Precision = 1-novelFDR) %>%
+    select(Tool, F1, Recall, Precision, cell_line, replicate) %>%
+    gather(key="Metric", value='Val', F1, Recall, Precision) %>%
+    mutate(Level = level)
+}
 
-df$data_name = str_replace(df$data_name, "CL_", "")
-df$data_name = str_replace(df$data_name, "_human", "")
+expressed_df = read_level("refguided_expressed_accuracy_summary.tsv", "Expressed", "knownTPR")
+novel_df     = read_level("refguided_accuracy_summary.tsv", "Novel", "novelTPR")
 
-df = df %>%  separate_wider_delim(data_name, "_", names=c("cell_line", "replicate"))
+df = bind_rows(expressed_df, novel_df) %>%
+  mutate(Level  = factor(Level,  levels = c("Expressed", "Novel")),
+         Metric = factor(Metric, levels = c("F1", "Recall", "Precision")))
 
-df = df %>% select(cell_line, replicate, Program, Metric, Value) %>% rename(Tool = Program)
+# Guard: the reported F1 must be the harmonic mean of the Precision and Recall
+# we just mapped. If a future column rename breaks the mapping, this fails loudly
+# instead of silently greying out a heatmap row.
+f1_check = df %>%
+  spread(key=Metric, value=Val) %>%
+  filter(!is.na(F1)) %>%
+  mutate(F1_recomputed = 2*Precision*Recall/(Precision+Recall),
+         delta = abs(F1 - F1_recomputed))
+stopifnot(!any(is.na(f1_check$Recall)))
+stopifnot(max(f1_check$delta, na.rm=TRUE) < 1e-6)
+cat("F1 consistency check passed for", nrow(f1_check), "tool x sample x level rows;",
+    "max |delta| =", signif(max(f1_check$delta, na.rm=TRUE), 3), "\n")
 
+df %>% count(Level, cell_line) %>% spread(Level, n)
+
+```
+
+```{r}
 
 df %>% head()
 
 ```
 
-
-
-```{r}
-
-df = df %>% filter(Metric != "knownTPR")
-
-df = df %>% spread(key=Metric, value=Value) 
-
-df = df %>% dplyr::rename(Recall = `novelTPR`) %>% mutate(Precision = 1-novelFDR) %>% select(-novelFDR)
-
-
-df %>% head()
-
-```
-
-
-
-
-```{r}
-
-df = df %>% dplyr::select(Tool, F1, Recall, Precision, cell_line, replicate) %>%
-  gather(key="Metric", value='Val', F1, Recall, Precision)
-
-df %>% head()
-
-
-```
-
-```{r}
-
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
-  summarize(mean_F1 = mean(Val)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Tool)
-
-
-df$Tool = factor(df$Tool, levels=prog_ranking)
-
-```
-
-```{r}
-df$Metric = factor(df$Metric, levels = c("F1", "Recall", "Precision"))
-```
-
-
-```{r}
-
-df %>% ggplot(aes(x=Tool, y=Val, fill=replicate)) + geom_bar(stat='identity', position='dodge') +
-  facet_grid(vars(Metric), vars(cell_line)) +
-  theme_bw() +
-   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Cell lines, ref-guided")
-
-```
+# Tool selection
 
 ```{r}
 
@@ -91,8 +104,12 @@ get_latest_tools = function(data_df) {
   latest_versioned_tools = tool_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool_Base) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_tools = tool_versions %>%
@@ -108,330 +125,175 @@ latest_tools
 
 ```
 
-
-
-
+Tools are ordered within each figure by descending F1 *at the level that figure
+shows*, so the ordering of a novel-level panel need not match its expressed-level
+counterpart.
 
 ```{r}
+
+rank_by_F1 = function(d) {
+  d %>% mutate(Tool = factor(Tool, levels = d %>%
+    filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)))
+}
+
+mean_df = df %>%
+  group_by(Tool, cell_line, Level, Metric) %>%
+  summarize(mean_val = mean(Val), .groups="drop")
+
+cell_lines = c("BT474", "K562", "HG002", "UHRR")
+
+```
+
+# All tools, per accuracy level
+
+```{r fig.width=11, fig.height=7}
 
 mean_vals_for_plot = df %>%
-  group_by(Tool, Metric, cell_line) %>%
-  summarize(mean_val = mean(Val), stderr = sd(Val)/sqrt(n())) 
+  group_by(Tool, Metric, Level, cell_line) %>%
+  summarize(mean_val = mean(Val), stderr = sd(Val)/sqrt(n()), .groups="drop")
 
-
-mean_vals_for_plot$Metric = factor(mean_vals_for_plot$Metric, levels=c("F1", "Recall", "Precision") ) 
-
-
-mean_vals_for_plot %>%  ggplot(aes(x=Tool, y=mean_val)) + geom_col() +
-  geom_errorbar(aes(x=Tool, ymin=mean_val-stderr, ymax=pmin(1, mean_val+stderr))) +
-  facet_grid(vars(Metric),vars(cell_line) ) +
-  theme_bw() +
-   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Cell lines - ref guided")
-
-```
-
-
-```{r}
-
-mean_df = df %>% group_by(Tool, cell_line, Metric) %>%
-  summarize(mean_val = mean(Val))
-
-mean_df %>% head()
-```
-
-```{r}
-
- df %>% select(cell_line) %>% unique()
-
-```
-
-
-```{r}
-
-BT474_df = mean_df %>% filter(cell_line == "BT474")
-
-BT474_rankings = BT474_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
-
-BT474_df$Tool = factor(BT474_df$Tool, levels=BT474_rankings)
-
-BT474_df_ranked_plot = BT474_df %>% ggplot(aes(x=Tool, y=mean_val, fill=mean_val)) + geom_col() +
-  facet_wrap(~Metric, ncol=1) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("BT474")
-            
-BT474_df_ranked_plot
-
-```
-
-```{r}
-
-
-K562_df = mean_df %>% filter(cell_line == "K562")
-
-K562_rankings = K562_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
-
-K562_df$Tool = factor(K562_df$Tool, levels=K562_rankings)
-
-K562_df_ranked_plot =   K562_df %>% ggplot(aes(x=Tool, y=mean_val, fill=mean_val)) + geom_col() +
-  facet_wrap(~Metric, ncol=1) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("K562")
-
-
-K562_df_ranked_plot
-
-```
-
-
-```{r}
-
-
-  HG002_df = mean_df %>% filter(cell_line == "HG002")
-  
-  HG002_rankings = HG002_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
-  
-  HG002_df$Tool = factor(HG002_df$Tool, levels=HG002_rankings)
-  
-  HG002_df_ranked_plot = HG002_df %>% ggplot(aes(x=Tool, y=mean_val, fill=mean_val)) + geom_col() +
-    facet_wrap(~Metric, ncol=1) +
+for (lvl in levels(df$Level)) {
+  p = mean_vals_for_plot %>% filter(Level == lvl) %>%
+    ggplot(aes(x=Tool, y=mean_val)) + geom_col() +
+    geom_errorbar(aes(x=Tool, ymin=mean_val-stderr, ymax=pmin(1, mean_val+stderr))) +
+    facet_grid(vars(Metric), vars(cell_line)) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggtitle("HG002")
-  
-  
-  HG002_df_ranked_plot
-
+    ggtitle(paste0("Cell lines, ref-guided -- ", lvl, "-level accuracy"))
+  print(p)
+}
 
 ```
 
-```{r}
+# Ranked bar plots per cell line
 
+```{r fig.width=14, fig.height=8}
 
-UHRR_df = mean_df %>% filter(cell_line == "UHRR")
-
-UHRR_rankings = UHRR_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
-
-UHRR_df$Tool = factor(UHRR_df$Tool, levels=UHRR_rankings)
-
-UHRR_df_ranked_plot = UHRR_df %>% ggplot(aes(x=Tool, y=mean_val, fill=mean_val)) + geom_col() +
-  facet_wrap(~Metric, ncol=1) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("UHRR")
-
-UHRR_df_ranked_plot
-
-```
-
-```{r}
-
-library(cowplot)
-
-plot_grid(BT474_df_ranked_plot,
-          K562_df_ranked_plot,
-          HG002_df_ranked_plot,
-          UHRR_df_ranked_plot,
-          nrow=1)
-
-```
-
-
-# use heatmap reprsentations for condensed view.
-
-
-```{r}
-
-BT474_tile_plot = BT474_df %>%  
-  mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
-  ggplot(aes(x=Tool, y=Metric, fill=mean_val))  +
-  geom_tile(color = "white", size = 0.5) +
-  geom_text(aes(label = round(mean_val, 2)), 
-            size = 3, 
-            color = "white") +
-  #scale_fill_gradient(low = "lightblue", high = "steelblue", limits = c(0, 1)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("BT474")
-
-BT474_tile_plot
-
-```
-
-
-```{r}
-
-K562_tile_plot = K562_df %>%  
-  mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
-  ggplot(aes(x=Tool, y=Metric, fill=mean_val))  +
-  geom_tile(color = "white", size = 0.5) +
-  geom_text(aes(label = round(mean_val, 2)), 
-            size = 3, 
-            color = "white") +
-  #scale_fill_gradient(low = "lightblue", high = "steelblue", limits = c(0, 1)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("K562")
-
-K562_tile_plot
-
-```
-
-
-```{r}
-
-  HG002_tile_plot = HG002_df %>%  
-  mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
-  ggplot(aes(x=Tool, y=Metric, fill=mean_val))  +
-  geom_tile(color = "white", size = 0.5) +
-  geom_text(aes(label = round(mean_val, 2)), 
-            size = 3, 
-            color = "white") +
-  #scale_fill_gradient(low = "lightblue", high = "steelblue", limits = c(0, 1)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggtitle("HG002")
-  
-  HG002_tile_plot
-
-```
-
-```{r}
-
-UHRR_tile_plot = UHRR_df %>%  
-  mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
-  ggplot(aes(x=Tool, y=Metric, fill=mean_val))  +
-  geom_tile(color = "white", size = 0.5) +
-  geom_text(aes(label = round(mean_val, 2)), 
-            size = 3, 
-            color = "white") +
-  #scale_fill_gradient(low = "lightblue", high = "steelblue", limits = c(0, 1)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("UHRR")
-
-UHRR_tile_plot
-
-```
-
-
-
-
-
-
-```{r}
-
-
-stacked_tile_plot = plot_grid(BT474_tile_plot,
-                              K562_tile_plot,
-                              HG002_tile_plot,
-                              UHRR_tile_plot,
-          ncol=1)
-
-stacked_tile_plot 
-
-```
-
-```{r}
-
-
-ggsave(stacked_tile_plot, file="Cell_lines_summary.pdf", width=8, height=10)
-
-
-```
-
-```{r}
-
-latest_mean_df = df %>%
-  filter(as.character(Tool) %in% latest_tools) %>%
-  group_by(Tool, cell_line, Metric) %>%
-  summarize(mean_val = mean(Val))
-
-latest_BT474_df = latest_mean_df %>% filter(cell_line == "BT474")
-
-latest_BT474_rankings = latest_BT474_df %>%
-  filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
-  pull(Tool)
-
-latest_BT474_df$Tool = factor(latest_BT474_df$Tool, levels=latest_BT474_rankings)
-
-latest_K562_df = latest_mean_df %>% filter(cell_line == "K562")
-
-latest_K562_rankings = latest_K562_df %>%
-  filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
-  pull(Tool)
-
-latest_K562_df$Tool = factor(latest_K562_df$Tool, levels=latest_K562_rankings)
-
-latest_HG002_df = latest_mean_df %>% filter(cell_line == "HG002")
-
-latest_HG002_rankings = latest_HG002_df %>%
-  filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
-  pull(Tool)
-
-latest_HG002_df$Tool = factor(latest_HG002_df$Tool, levels=latest_HG002_rankings)
-
-latest_UHRR_df = latest_mean_df %>% filter(cell_line == "UHRR")
-
-latest_UHRR_rankings = latest_UHRR_df %>%
-  filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
-  pull(Tool)
-
-latest_UHRR_df$Tool = factor(latest_UHRR_df$Tool, levels=latest_UHRR_rankings)
-
-make_tile_plot = function(plot_df, plot_title) {
-
-  plot_df %>%
-    mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
-    ggplot(aes(x=Tool, y=Metric, fill=mean_val)) +
-    geom_tile(color = "white", size = 0.5) +
-    geom_text(aes(label = round(mean_val, 2)),
-              size = 3,
-              color = "white") +
+make_ranked_plot = function(d, plot_title) {
+  rank_by_F1(d) %>%
+    ggplot(aes(x=Tool, y=mean_val, fill=mean_val)) + geom_col() +
+    facet_wrap(~Metric, ncol=1) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggtitle(plot_title)
 }
 
-latest_stacked_tile_plot = plot_grid(make_tile_plot(latest_BT474_df, "BT474"),
-                                     make_tile_plot(latest_K562_df, "K562"),
-                                     make_tile_plot(latest_HG002_df, "HG002"),
-                                     make_tile_plot(latest_UHRR_df, "UHRR"),
-                                     ncol=1)
+ranked_grids = list()
+for (lvl in levels(df$Level)) {
+  plots = lapply(cell_lines, function(cl) {
+    make_ranked_plot(mean_df %>% filter(cell_line == cl, Level == lvl),
+                     paste0(cl, " (", lvl, ")"))
+  })
+  g = plot_grid(plotlist = plots, nrow = 1)
+  ranked_grids[[lvl]] = g
+  print(g)
+}
 
-latest_stacked_tile_plot
+```
+
+# Heatmap representations, condensed view
+
+```{r fig.width=8, fig.height=10}
+
+make_tile_plot = function(d, plot_title) {
+  rank_by_F1(d) %>%
+    mutate(Metric = factor(Metric, levels = c("Precision", "Recall", "F1"))) %>%
+    ggplot(aes(x=Tool, y=Metric, fill=mean_val)) +
+    geom_tile(color = "white", size = 0.5) +
+    geom_text(aes(label = round(mean_val, 2)), size = 3, color = "white") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggtitle(plot_title)
+}
+
+stacked_tile_plots = list()
+for (lvl in levels(df$Level)) {
+  plots = lapply(cell_lines, function(cl) {
+    make_tile_plot(mean_df %>% filter(cell_line == cl, Level == lvl),
+                   paste0(cl, " -- ", lvl, "-level accuracy"))
+  })
+  g = plot_grid(plotlist = plots, ncol = 1)
+  stacked_tile_plots[[lvl]] = g
+  print(g)
+}
 
 ```
 
 ```{r}
 
-ggsave(latest_stacked_tile_plot,
-       file="Cell_lines_summary.latest_tools.pdf",
-       width=8,
-       height=10)
+for (lvl in names(stacked_tile_plots)) {
+  fname = paste0("Cell_lines_summary.", tolower(lvl), ".pdf")
+  ggsave(stacked_tile_plots[[lvl]], file=fname, width=8, height=10)
+  message("wrote ", fname)
+}
 
 ```
 
+# Latest tool versions only
 
+```{r fig.width=8, fig.height=10}
 
+latest_mean_df = df %>%
+  filter(as.character(Tool) %in% latest_tools) %>%
+  group_by(Tool, cell_line, Level, Metric) %>%
+  summarize(mean_val = mean(Val), .groups="drop")
 
+latest_stacked_tile_plots = list()
+for (lvl in levels(df$Level)) {
+  plots = lapply(cell_lines, function(cl) {
+    make_tile_plot(latest_mean_df %>% filter(cell_line == cl, Level == lvl),
+                   paste0(cl, " -- ", lvl, "-level accuracy (latest versions)"))
+  })
+  g = plot_grid(plotlist = plots, ncol = 1)
+  latest_stacked_tile_plots[[lvl]] = g
+  print(g)
+}
 
+```
 
+```{r}
 
+for (lvl in names(latest_stacked_tile_plots)) {
+  fname = paste0("Cell_lines_summary.latest_tools.", tolower(lvl), ".pdf")
+  ggsave(latest_stacked_tile_plots[[lvl]], file=fname, width=8, height=10)
+  message("wrote ", fname)
+}
 
+```
 
+# Expressed versus novel, side by side
 
+Same tools, same samples, the two universes side by side. The expressed universe
+is dominated by held-out chains, so the two levels track each other closely; where
+they diverge, a tool is being rewarded or penalised for how it handles the
+*provided* models it was given rather than for discovery.
 
+```{r fig.width=10, fig.height=8}
 
+latest_F1 = latest_mean_df %>% filter(Metric == "F1")
 
+both_levels_plot = latest_F1 %>%
+  mutate(Tool = fct_reorder(Tool, mean_val, .fun=mean, .desc=FALSE)) %>%
+  ggplot(aes(x=Tool, y=mean_val, fill=Level)) +
+  geom_col(position="dodge") +
+  coord_flip() +
+  facet_wrap(~cell_line, nrow=1) +
+  theme_bw() +
+  labs(y="F1", title="Ref-guided F1: expressed-level vs novel-level (latest versions)")
 
+both_levels_plot
 
+ggsave(both_levels_plot, file="Cell_lines_summary.latest_tools.both_levels.pdf",
+       width=10, height=8)
 
+```
 
+```{r}
 
+latest_F1 %>%
+  select(Tool, cell_line, Level, mean_val) %>%
+  spread(Level, mean_val) %>%
+  mutate(`Expressed - Novel` = round(Expressed - Novel, 4)) %>%
+  arrange(cell_line, desc(Expressed))
+
+```

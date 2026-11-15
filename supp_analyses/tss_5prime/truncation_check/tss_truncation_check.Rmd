@@ -1,0 +1,119 @@
+---
+title: "Are the ALS TSS switches 5' truncation? Read lengths and read ends by cell type"
+output: github_document
+---
+
+In ALS (LP00714, cortex nuclei), most high-confidence site-level TSS switches have a neuron
+cluster favouring the downstream TSS, the downstream site rarely has a FANTOM5 CAGE peak, and
+the genes are housekeeping genes. If that comes from reads that stop short of the 5' end, a
+gene like GAPDH or ACTB should show, in neurons, read 3' ends at the same polyA site as in
+other cells but read 5' ends spread downstream of the TSS.
+
+Reads are taken per gene with LRAA's read filters and strand rule
+(`util/sc/read_end_profile_by_cluster.py`), kept if their introns are annotated introns of
+the gene, and placed along the gene's main annotated transcript (the one most reads match
+exactly). Positions are nt from that transcript's 5' end. Because GENCODE models can extend
+past where reads start (RPL28's main model starts ~590 nt upstream), each read's start is
+also measured from the gene's **observed TSS**, the most common read-start position (10 nt
+bins) within the main transcript's first exon, over all cells of the dataset (anchored to the
+first exon because in some genes truncated reads pile up near the 3' end and outnumber the
+reads that start at the TSS), and its end from the most common read end. PBMC
+(whole cells) is the contrast.
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 10, dpi = 120)
+library(tidyverse)
+```
+
+```{r data}
+als_class = c("0" = "Oligodendrocyte", "3" = "Oligodendrocyte", "1" = "Excitatory neuron", "8" = "Excitatory neuron",
+              "4" = "Inhibitory neuron", "6" = "Inhibitory neuron", "2" = "Astrocyte", "7" = "Astrocyte", "12" = "Astrocyte",
+              "5" = "Microglia", "9" = "OPC", "10" = "Vascular / meningeal", "11" = "Vascular / meningeal",
+              "13" = "Vascular / meningeal")
+pbmc_class = c("1" = "Monocyte / DC", "11" = "Monocyte / DC", "13" = "Monocyte / DC", "6" = "B", "9" = "B",
+               "3" = "CD4 T", "7" = "CD4 T", "0" = "CD4 T", "5" = "CD4 T", "12" = "CD4 T",
+               "2" = "CD8 T / NK", "4" = "CD8 T / NK", "8" = "CD8 T / NK", "10" = "CD8 T / NK")
+als_order = c("Excitatory neuron", "Inhibitory neuron", "Oligodendrocyte", "OPC", "Astrocyte", "Microglia", "Vascular / meningeal")
+pbmc_order = c("Monocyte / DC", "B", "CD4 T", "CD8 T / NK")
+label = function(d, ds) d %>% mutate(dataset = ds, cluster_n = sub("Cluster_", "", cluster),
+                                     class = if (ds == "ALS") als_class[cluster_n] else pbmc_class[cluster_n])
+
+reads = bind_rows(label(read_tsv("ALS.reads.tsv.gz", show_col_types = FALSE), "ALS"),
+                  label(read_tsv("PBMC.reads.tsv.gz", show_col_types = FALSE), "PBMC"))
+lengths = bind_rows(label(read_tsv("ALS.lengths.tsv.gz", show_col_types = FALSE), "ALS"),
+                    label(read_tsv("PBMC.lengths.tsv.gz", show_col_types = FALSE), "PBMC"))
+mode10 = function(x) { x = x[!is.na(x)]; b = floor(x / 10) * 10; as.numeric(names(which.max(table(b)))) + 5 }
+reads = reads %>% group_by(dataset, gene) %>%
+    mutate(obs_tss = mode10(five_prime_tx_pos[five_prime_tx_pos <= first_exon_len[1] + 30]),
+           obs_end = mode10(three_prime_tx_pos),
+           start_offset = five_prime_tx_pos - obs_tss, end_offset = three_prime_tx_pos - obs_end,
+           reaches_tss = abs(start_offset) <= 50, reaches_end = abs(end_offset) <= 50) %>% ungroup()
+```
+
+## 1. Read lengths, genome-wide sample, by cluster
+
+```{r lengths, fig.height = 4.5}
+ls = lengths %>% group_by(dataset, cluster_n, class) %>%
+    summarize(n = n(), median_len = median(aligned_len), q25 = quantile(aligned_len, 0.25),
+              q75 = quantile(aligned_len, 0.75), .groups = "drop")
+ggplot(lengths, aes(reorder(paste0("C", cluster_n), aligned_len, median), aligned_len, fill = class)) +
+    geom_boxplot(outlier.shape = NA, linewidth = 0.3) + coord_cartesian(ylim = c(0, 2000)) +
+    facet_wrap(~ dataset, scales = "free_x") + labs(x = NULL, y = "aligned read length (nt)", fill = NULL) +
+    theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+knitr::kable(ls %>% arrange(dataset, median_len), digits = 0)
+```
+
+## 2. Where reads start and end, per gene
+
+Each panel: read 5' starts (left) and 3' ends (right) along the gene's main transcript, by
+cell type, as a share of that cell type's reads. Dashed line: the observed TSS / end.
+
+```{r ends, fig.height = 13}
+plot_ends = function(ds, order) {
+    d = reads %>% filter(dataset == ds) %>% mutate(class = factor(class, levels = order)) %>%
+        select(gene, class, start = five_prime_tx_pos, end = three_prime_tx_pos, obs_tss, obs_end) %>%
+        pivot_longer(c(start, end), names_to = "which", values_to = "pos") %>% filter(!is.na(pos)) %>%
+        mutate(which = factor(which, levels = c("start", "end"), labels = c("read 5' start", "read 3' end")))
+    ref = d %>% distinct(gene, which, obs_tss, obs_end) %>%
+        mutate(x = if_else(which == "read 5' start", obs_tss, obs_end))
+    ggplot(d, aes(pos, after_stat(density), color = class)) +
+        geom_freqpoly(binwidth = 25, linewidth = 0.4) +
+        geom_vline(data = ref, aes(xintercept = x), linetype = "dashed", linewidth = 0.3) +
+        facet_wrap(gene ~ which, scales = "free", ncol = 4) +
+        labs(x = "position along main transcript (nt from its 5' end)", y = "density", color = NULL,
+             title = ds) + theme_bw() + theme(legend.position = "bottom")
+}
+plot_ends("ALS", als_order)
+```
+
+```{r ends_pbmc, fig.height = 13}
+plot_ends("PBMC", pbmc_order)
+```
+
+## 3. Share of reads reaching the TSS and the 3' end, by cell type
+
+`reach TSS`: read starts within 50 nt of the observed TSS. `reach end`: read ends within
+50 nt of the observed end. `median start offset`: nt downstream of the observed TSS.
+
+```{r reach}
+reach = reads %>% group_by(dataset, gene, class) %>%
+    summarize(reads = n(), median_len = median(aligned_len), reach_TSS = mean(reaches_tss, na.rm = TRUE),
+              reach_end = mean(reaches_end, na.rm = TRUE), median_start_offset = median(start_offset, na.rm = TRUE),
+              .groups = "drop")
+ggplot(reach %>% filter(reads >= 30), aes(reach_TSS, reach_end, color = class, shape = dataset)) +
+    geom_point(size = 2) + facet_wrap(~ gene) + coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+    labs(x = "share of reads starting at the observed TSS", y = "share of reads ending at the observed end",
+         color = NULL) + theme_bw()
+knitr::kable(reach %>% arrange(gene, dataset, desc(reach_TSS)), digits = 2)
+```
+
+## 4. Per cluster (ALS)
+
+```{r per_cluster}
+pc = reads %>% filter(dataset == "ALS") %>% group_by(gene, cluster_n, class) %>%
+    summarize(reads = n(), reach_TSS = mean(reaches_tss, na.rm = TRUE), reach_end = mean(reaches_end, na.rm = TRUE),
+              median_len = median(aligned_len), .groups = "drop")
+ggplot(pc %>% filter(reads >= 20), aes(reorder(paste0("C", cluster_n), reach_TSS), reach_TSS, fill = class)) +
+    geom_col() + facet_wrap(~ gene, ncol = 3) + labs(x = NULL, y = "share of reads starting at the observed TSS", fill = NULL) +
+    theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```

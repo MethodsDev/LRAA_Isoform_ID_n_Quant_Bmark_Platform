@@ -1,0 +1,15 @@
+derived from MDL github: iso-reconstruct-benchmark2/workflows_rebuilt
+
+Versions:
+    Bambu: 3.4.0
+    ESPRESSO: 1.5.0
+    FLAMES: 0.1
+    Flair: 2.0.0
+    Isosceles: 0.2.0
+    IsoQuant: 3.6.3
+    IsoSeq: 4.0.0
+    Mandalorian: 4.5.0
+    Oarfish: 0.6.5
+    StringTie: 2.2.3
+    TALON: v6.0
+    

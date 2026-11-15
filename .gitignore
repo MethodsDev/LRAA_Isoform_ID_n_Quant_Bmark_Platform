@@ -56,3 +56,8 @@ script.log
 # Executed notebooks are generated in sample directories.
 *.ipynb
 !benchmarking/template_notebooks/*.ipynb
+
+# Paper supplementary analyses, tables and data-generation notebooks are tracked as published.
+!supp_analyses/**
+!supp_tables/**
+!data_generation/**

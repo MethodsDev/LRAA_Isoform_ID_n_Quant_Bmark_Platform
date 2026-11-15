@@ -1,3 +1,4 @@
+
 set -ex
 
 if [ ! -f 'bmark.ok' ]; then
@@ -11,4 +12,5 @@ if [ ! -f 'bmark.ok' ]; then
     touch bmark.ok
 
 fi
+
 

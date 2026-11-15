@@ -1,0 +1,17 @@
+seed	kind	arm	pair_kind	n_pairs	genes_tested	stable_genes_all	events	HC_events	HC_genes	HC_per_pair
+1	SplicePattern	v0.51.0 pooled (genome-wide)	NULL	4	9053	1300	44	5	5	1.25
+1	SplicePattern	v0.51.0 pooled (genome-wide)	REAL	6	9053	1300	1068	201	160	33.5
+1	SplicePattern	v0.51.0 pooled (chr1/6/11/22)	NULL	4	2085	299	9	0	0	0.0
+1	SplicePattern	v0.51.0 pooled (chr1/6/11/22)	REAL	6	2085	299	260	55	42	9.166666666666666
+1	IsoformTermini	v0.51.0 pooled (genome-wide)	NULL	4	7429	267	7	3	3	0.75
+1	IsoformTermini	v0.51.0 pooled (genome-wide)	REAL	6	7429	267	207	37	25	6.166666666666667
+1	IsoformTermini	v0.51.0 pooled (chr1/6/11/22)	NULL	4	1736	67	2	1	1	0.25
+1	IsoformTermini	v0.51.0 pooled (chr1/6/11/22)	REAL	6	1736	67	60	19	12	3.1666666666666665
+2	SplicePattern	v0.51.0 pooled (genome-wide)	NULL	4	9057	1300	55	9	9	2.25
+2	SplicePattern	v0.51.0 pooled (genome-wide)	REAL	6	9057	1300	1062	188	150	31.333333333333332
+2	SplicePattern	v0.51.0 pooled (chr1/6/11/22)	NULL	4	2070	312	11	1	1	0.25
+2	SplicePattern	v0.51.0 pooled (chr1/6/11/22)	REAL	6	2070	312	264	49	38	8.166666666666666
+2	IsoformTermini	v0.51.0 pooled (genome-wide)	NULL	4	7392	264	8	2	2	0.5
+2	IsoformTermini	v0.51.0 pooled (genome-wide)	REAL	6	7392	264	183	27	21	4.5
+2	IsoformTermini	v0.51.0 pooled (chr1/6/11/22)	NULL	4	1725	66	0	0	0	0.0
+2	IsoformTermini	v0.51.0 pooled (chr1/6/11/22)	REAL	6	1725	66	51	12	9	2.0

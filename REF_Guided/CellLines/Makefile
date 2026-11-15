@@ -4,9 +4,9 @@ MAKEFLAGS += -j6   # cap parallelism to avoid OOM on big-genome notebooks
 DIRS := CL_BT474_E0_human CL_HG002_E0_human CL_K562_E0_human CL_UHRR_E0_human
 
 # Define targets for each directory
-.PHONY: all $(DIRS) report
+.PHONY: all $(DIRS) report summarize
 
-all: $(DIRS) report
+all: $(DIRS) report summarize
 
 # Each directory runs its script with logging and error handling
 $(DIRS):
@@ -35,6 +35,10 @@ clean:
 
 
 
-summarize:
+summarize: $(DIRS)
 	find ./ | grep known_and_novel_TPR_FDR_F1.tsv  > refguided_accuracy_summary.files.list
 	../../benchmarking/misc/aggregate_result_tables.py refguided_accuracy_summary.files.list > refguided_accuracy_summary.tsv
+	# expressed-level accuracy: scored over every proxy-expressed reference chain
+	# (provided + held-out). Shares its universe with the de novo regime.
+	find ./ | grep full_transcriptome_TPR_FDR_F1.tsv > refguided_expressed_accuracy_summary.files.list
+	../../benchmarking/misc/aggregate_result_tables.py refguided_expressed_accuracy_summary.files.list > refguided_expressed_accuracy_summary.tsv

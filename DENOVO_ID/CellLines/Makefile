@@ -4,9 +4,9 @@ MAKEFLAGS += -j6   # cap parallelism to avoid OOM on big-genome notebooks
 DIRS := CL_BT474_E0_human CL_HG002_E0_human CL_K562_E0_human CL_UHRR_E0_human
 
 # Define targets for each directory
-.PHONY: all $(DIRS) report
+.PHONY: all $(DIRS) report summarize
 
-all: $(DIRS) report
+all: $(DIRS) report summarize
 
 # Each directory runs its script with logging and error handling
 $(DIRS):
@@ -32,7 +32,7 @@ clean:
 	rm -f ./CL*/bmark.ok
 	rm -f ./denovo_ID_summary.files.list ./all.Denovo_ID_summary.tsv
 
-summarize:
+summarize: $(DIRS)
 	find ./ | grep full_transcriptome_TPR_FDR_F1.tsv > denovo_ID_summary.files.list
 	../../benchmarking/misc/aggregate_result_tables.py denovo_ID_summary.files.list > all.Denovo_ID_summary.tsv
 

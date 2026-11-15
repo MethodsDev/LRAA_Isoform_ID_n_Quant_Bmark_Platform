@@ -44,7 +44,7 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 ```{r}
 # define ranking
 
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=prog_ranking)
 
@@ -143,7 +143,7 @@ get_ranked_df = function(sirv_set_val, data_df = df) {
   ranked_progs = ranked_df %>% filter(Metric == "F1") %>% 
               group_by(Program) %>% 
               summarize(mean_val = mean(Value)) %>% 
-              arrange(dplyr::desc(mean_val)) %>% pull(Program)
+              arrange(desc(mean_val)) %>% pull(Program)
 
   ranked_df$Program = factor(ranked_df$Program, levels=ranked_progs)
   
@@ -319,8 +319,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -345,7 +349,7 @@ latest_program_ranking = latest_program_df %>%
   filter(Metric == "F1") %>%
   group_by(Program) %>%
   summarize(mean_F1 = mean(Value), .groups = "drop") %>%
-  arrange(dplyr::desc(mean_F1)) %>%
+  arrange(desc(mean_F1)) %>%
   pull(Program)
 
 latest_program_df$Program = factor(latest_program_df$Program,

@@ -1,0 +1,97 @@
+dataset	gene	class	cell_type	clusters	mean_TPM
+PBMC	RNASE1	RNase A family (secreted)	B	2	0.00
+PBMC	RNASE1	RNase A family (secreted)	CD4 T	5	0.05
+PBMC	RNASE1	RNase A family (secreted)	CD8 T / NK	4	0.24
+PBMC	RNASE1	RNase A family (secreted)	Monocyte / DC	3	0.77
+PBMC	RNASE2	RNase A family (secreted)	B	2	0.82
+PBMC	RNASE2	RNase A family (secreted)	CD4 T	5	1.47
+PBMC	RNASE2	RNase A family (secreted)	CD8 T / NK	4	1.08
+PBMC	RNASE2	RNase A family (secreted)	Monocyte / DC	3	19.89
+PBMC	RNASE3	RNase A family (secreted)	B	2	0.00
+PBMC	RNASE3	RNase A family (secreted)	CD4 T	5	0.00
+PBMC	RNASE3	RNase A family (secreted)	CD8 T / NK	4	0.00
+PBMC	RNASE3	RNase A family (secreted)	Monocyte / DC	3	0.52
+PBMC	RNASE4	RNase A family (secreted)	B	2	1.60
+PBMC	RNASE4	RNase A family (secreted)	CD4 T	5	0.49
+PBMC	RNASE4	RNase A family (secreted)	CD8 T / NK	4	0.61
+PBMC	RNASE4	RNase A family (secreted)	Monocyte / DC	3	4.64
+PBMC	ANG	RNase A family (secreted)	B	2	1.20
+PBMC	ANG	RNase A family (secreted)	CD4 T	5	0.77
+PBMC	ANG	RNase A family (secreted)	CD8 T / NK	4	0.41
+PBMC	ANG	RNase A family (secreted)	Monocyte / DC	3	4.56
+PBMC	RNASE6	RNase A family (secreted)	B	2	62.94
+PBMC	RNASE6	RNase A family (secreted)	CD4 T	5	6.43
+PBMC	RNASE6	RNase A family (secreted)	CD8 T / NK	4	7.37
+PBMC	RNASE6	RNase A family (secreted)	Monocyte / DC	3	106.69
+PBMC	RNASET2	lysosomal RNase	B	2	246.22
+PBMC	RNASET2	lysosomal RNase	CD4 T	5	178.12
+PBMC	RNASET2	lysosomal RNase	CD8 T / NK	4	113.89
+PBMC	RNASET2	lysosomal RNase	Monocyte / DC	3	405.28
+PBMC	PLD3	lysosomal 5'-3' exonuclease	B	2	23.91
+PBMC	PLD3	lysosomal 5'-3' exonuclease	CD4 T	5	26.45
+PBMC	PLD3	lysosomal 5'-3' exonuclease	CD8 T / NK	4	28.63
+PBMC	PLD3	lysosomal 5'-3' exonuclease	Monocyte / DC	3	57.88
+PBMC	PLD4	lysosomal 5'-3' exonuclease	B	2	25.27
+PBMC	PLD4	lysosomal 5'-3' exonuclease	CD4 T	5	0.67
+PBMC	PLD4	lysosomal 5'-3' exonuclease	CD8 T / NK	4	1.08
+PBMC	PLD4	lysosomal 5'-3' exonuclease	Monocyte / DC	3	62.49
+PBMC	RNASEL	antiviral endoribonuclease	B	2	7.78
+PBMC	RNASEL	antiviral endoribonuclease	CD4 T	5	10.68
+PBMC	RNASEL	antiviral endoribonuclease	CD8 T / NK	4	8.60
+PBMC	RNASEL	antiviral endoribonuclease	Monocyte / DC	3	14.09
+PBMC	ZC3H12A	Regnase endoribonuclease	B	2	4.71
+PBMC	ZC3H12A	Regnase endoribonuclease	CD4 T	5	4.74
+PBMC	ZC3H12A	Regnase endoribonuclease	CD8 T / NK	4	8.00
+PBMC	ZC3H12A	Regnase endoribonuclease	Monocyte / DC	3	3.77
+PBMC	ZC3H12D	Regnase endoribonuclease	B	2	21.20
+PBMC	ZC3H12D	Regnase endoribonuclease	CD4 T	5	22.03
+PBMC	ZC3H12D	Regnase endoribonuclease	CD8 T / NK	4	3.15
+PBMC	ZC3H12D	Regnase endoribonuclease	Monocyte / DC	3	5.93
+PBMC	ERN1	IRE1 (RIDD) endoribonuclease	B	2	19.90
+PBMC	ERN1	IRE1 (RIDD) endoribonuclease	CD4 T	5	85.50
+PBMC	ERN1	IRE1 (RIDD) endoribonuclease	CD8 T / NK	4	76.89
+PBMC	ERN1	IRE1 (RIDD) endoribonuclease	Monocyte / DC	3	50.11
+PBMC	XRN1	5'-3' decay	B	2	113.23
+PBMC	XRN1	5'-3' decay	CD4 T	5	144.85
+PBMC	XRN1	5'-3' decay	CD8 T / NK	4	161.01
+PBMC	XRN1	5'-3' decay	Monocyte / DC	3	118.26
+PBMC	XRN2	5'-3' decay (nuclear)	B	2	98.64
+PBMC	XRN2	5'-3' decay (nuclear)	CD4 T	5	125.09
+PBMC	XRN2	5'-3' decay (nuclear)	CD8 T / NK	4	134.43
+PBMC	XRN2	5'-3' decay (nuclear)	Monocyte / DC	3	176.12
+PBMC	DCP2	decapping	B	2	70.66
+PBMC	DCP2	decapping	CD4 T	5	69.15
+PBMC	DCP2	decapping	CD8 T / NK	4	67.71
+PBMC	DCP2	decapping	Monocyte / DC	3	101.17
+PBMC	DCP1A	decapping	B	2	34.14
+PBMC	DCP1A	decapping	CD4 T	5	33.07
+PBMC	DCP1A	decapping	CD8 T / NK	4	38.88
+PBMC	DCP1A	decapping	Monocyte / DC	3	21.72
+PBMC	EXOSC10	exosome (nuclear)	B	2	27.18
+PBMC	EXOSC10	exosome (nuclear)	CD4 T	5	29.36
+PBMC	EXOSC10	exosome (nuclear)	CD8 T / NK	4	31.23
+PBMC	EXOSC10	exosome (nuclear)	Monocyte / DC	3	28.43
+PBMC	DIS3	exosome	B	2	33.56
+PBMC	DIS3	exosome	CD4 T	5	31.45
+PBMC	DIS3	exosome	CD8 T / NK	4	36.17
+PBMC	DIS3	exosome	Monocyte / DC	3	37.60
+PBMC	DIS3L2	3'-5' decay	B	2	31.85
+PBMC	DIS3L2	3'-5' decay	CD4 T	5	40.67
+PBMC	DIS3L2	3'-5' decay	CD8 T / NK	4	38.95
+PBMC	DIS3L2	3'-5' decay	Monocyte / DC	3	22.36
+PBMC	CNOT7	deadenylation	B	2	48.15
+PBMC	CNOT7	deadenylation	CD4 T	5	48.79
+PBMC	CNOT7	deadenylation	CD8 T / NK	4	53.55
+PBMC	CNOT7	deadenylation	Monocyte / DC	3	50.93
+PBMC	PAN2	deadenylation	B	2	8.36
+PBMC	PAN2	deadenylation	CD4 T	5	8.95
+PBMC	PAN2	deadenylation	CD8 T / NK	4	5.39
+PBMC	PAN2	deadenylation	Monocyte / DC	3	10.81
+PBMC	SMG6	NMD endonuclease	B	2	36.43
+PBMC	SMG6	NMD endonuclease	CD4 T	5	81.58
+PBMC	SMG6	NMD endonuclease	CD8 T / NK	4	58.05
+PBMC	SMG6	NMD endonuclease	Monocyte / DC	3	30.43
+PBMC	PNPT1	3'-5' exoribonuclease	B	2	31.00
+PBMC	PNPT1	3'-5' exoribonuclease	CD4 T	5	30.54
+PBMC	PNPT1	3'-5' exoribonuclease	CD8 T / NK	4	26.48
+PBMC	PNPT1	3'-5' exoribonuclease	Monocyte / DC	3	26.01
