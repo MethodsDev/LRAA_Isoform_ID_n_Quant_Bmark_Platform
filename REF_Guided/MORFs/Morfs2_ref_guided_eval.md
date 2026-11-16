@@ -12,13 +12,13 @@ df$data_name = str_replace(df$data_name, "morf2_", "")
 df %>% head()
 ```
 
-    ##                          data_name       Program   Metric      Value
-    ## 1 ont_merged_annot_compat_1isoform  LRAA-v0.17.5 knownTPR 0.95024876
-    ## 2 ont_merged_annot_compat_1isoform  LRAA-v0.17.5 novelTPR 0.67590454
-    ## 3 ont_merged_annot_compat_1isoform  LRAA-v0.17.5 novelFDR 0.07188161
-    ## 4 ont_merged_annot_compat_1isoform  LRAA-v0.17.5       F1 0.78218263
-    ## 5 ont_merged_annot_compat_1isoform Bambu-v3.12.1 knownTPR 0.99786780
-    ## 6 ont_merged_annot_compat_1isoform Bambu-v3.12.1 novelTPR 0.10700539
+    ##                          data_name       Program   Metric     Value
+    ## 1 ont_merged_annot_compat_1isoform  LRAA-v0.51.0 knownTPR 0.9644634
+    ## 2 ont_merged_annot_compat_1isoform  LRAA-v0.51.0 novelTPR 0.8160123
+    ## 3 ont_merged_annot_compat_1isoform  LRAA-v0.51.0 novelFDR 0.1410049
+    ## 4 ont_merged_annot_compat_1isoform  LRAA-v0.51.0       F1 0.8369522
+    ## 5 ont_merged_annot_compat_1isoform Bambu-v3.12.1 knownTPR 0.9978678
+    ## 6 ont_merged_annot_compat_1isoform Bambu-v3.12.1 novelTPR 0.1070054
 
 ``` r
 df = df %>% filter(Metric != "knownTPR")
@@ -33,7 +33,7 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 ``` r
 # define ranking
 
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=prog_ranking)
 ```
@@ -76,8 +76,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -94,7 +98,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"      "ESPRESSO-v1.6.0"    "FLAIR-v3.0.0"      
     ##  [4] "FLAMES-v0.1"        "IsoQuant-v3.13.0"   "IsoSeq-v4.0.0"     
-    ##  [7] "LRAA-v0.17.5"       "Mandalorion-v4.5.0" "StringTie-v3.0.3"  
+    ##  [7] "LRAA-v0.51.0"       "Mandalorion-v4.5.0" "StringTie-v3.0.3"  
     ## [10] "TALON-v6.0"         "Isosceles"
 
 ``` r
@@ -124,7 +128,7 @@ ggsave(pacbio_only_plot, file="pacbio_only.summary.pdf", width=6, height=6)
 ``` r
 pacbio_only_df =  df %>% filter(grepl("pacbio", data_name)) 
 
-pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% 
+pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
   pull(Program)
 
 pacbio_only_df$Program = factor(pacbio_only_df$Program, levels=pacbio_only_rankings)
@@ -141,7 +145,7 @@ pacbio_only_plot = pacbio_only_df %>%
   theme_bw() +
   facet_wrap(~Metric, ncol=1) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - PacBio")
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio")
 
 
 pacbio_only_plot
@@ -154,7 +158,7 @@ pacbio_only_plot
 ``` r
 ONT_only_df =  df %>% filter(grepl("ont_", data_name)) 
 
-ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% 
+ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
   pull(Program)
 
 ONT_only_df$Program = factor(ONT_only_df$Program, levels=ONT_only_rankings)
@@ -171,7 +175,7 @@ ONT_only_plot = ONT_only_df %>%
   theme_bw() +
   facet_wrap(~Metric, ncol=1) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - ONT")
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT")
 
 
 ONT_only_plot
@@ -207,7 +211,7 @@ pacbio_only_plot = pacbio_only_df %>%
   #scale_fill_gradient(limits = c(0, 1), low = "white", high = "steelblue") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - PacBio") +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio") +
   labs(x = "Program", y = "Metric")
 ```
 
@@ -228,7 +232,7 @@ ONT_only_plot = ONT_only_df %>%
   #scale_fill_gradient(limits = c(0, 1), low = "white", high = "steelblue") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - ONT") +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT") +
   labs(x = "Program", y = "Metric")
 
 MORFs_refGuided_plot = grid.arrange(pacbio_only_plot, ONT_only_plot, ncol = 1)
@@ -254,7 +258,7 @@ latest_pacbio_only_df = df %>%
 
 latest_pacbio_only_rankings = latest_pacbio_only_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(Value)) %>%
+  arrange(desc(Value)) %>%
   pull(Program)
 
 latest_pacbio_only_df$Program = factor(latest_pacbio_only_df$Program,
@@ -266,7 +270,7 @@ latest_ONT_only_df = df %>%
 
 latest_ONT_only_rankings = latest_ONT_only_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(Value)) %>%
+  arrange(desc(Value)) %>%
   pull(Program)
 
 latest_ONT_only_df$Program = factor(latest_ONT_only_df$Program,
@@ -281,7 +285,7 @@ latest_pacbio_only_plot = latest_pacbio_only_df %>%
             color = "white") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - PacBio - Latest Tools") +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - PacBio - Latest Tools") +
   labs(x = "Program", y = "Metric")
 
 latest_ONT_only_plot = latest_ONT_only_df %>%
@@ -293,7 +297,7 @@ latest_ONT_only_plot = latest_ONT_only_df %>%
             color = "white") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Ref-guided Isoform Discovery Accuracy - Morf2 - ONT - Latest Tools") +
+  ggtitle("Ref annotation-free Isoform Discovery Accuracy - Morf2 - ONT - Latest Tools") +
   labs(x = "Program", y = "Metric")
 
 latest_MORFs_refGuided_plot = grid.arrange(latest_pacbio_only_plot,

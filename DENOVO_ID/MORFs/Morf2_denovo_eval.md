@@ -13,9 +13,9 @@ df %>% head()
 ```
 
     ##         Program   Metric     Value                        data_name
-    ## 1  LRAA-v0.17.5 knownTPR 0.6995565 ont_merged_annot_compat_1isoform
-    ## 2  LRAA-v0.17.5 novelFDR 0.1292548 ont_merged_annot_compat_1isoform
-    ## 3  LRAA-v0.17.5       F1 0.7758197 ont_merged_annot_compat_1isoform
+    ## 1  LRAA-v0.51.0 knownTPR 0.7823356 ont_merged_annot_compat_1isoform
+    ## 2  LRAA-v0.51.0 novelFDR 0.1569096 ont_merged_annot_compat_1isoform
+    ## 3  LRAA-v0.51.0       F1 0.8115775 ont_merged_annot_compat_1isoform
     ## 4 Bambu-v3.12.1 knownTPR 0.6999261 ont_merged_annot_compat_1isoform
     ## 5 Bambu-v3.12.1 novelFDR 0.4163328 ont_merged_annot_compat_1isoform
     ## 6 Bambu-v3.12.1       F1 0.6365317 ont_merged_annot_compat_1isoform
@@ -30,7 +30,7 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 
 ``` r
 program_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% 
-  summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+  summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=program_ranking)
 ```
@@ -71,8 +71,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -88,13 +92,13 @@ latest_programs
 ```
 
     ## [1] "Bambu-v3.12.1"      "ESPRESSO-v1.6.0"    "IsoQuant-v3.13.0"  
-    ## [4] "IsoSeq-v4.0.0"      "LRAA-v0.17.5"       "Mandalorion-v4.5.0"
+    ## [4] "IsoSeq-v4.0.0"      "LRAA-v0.51.0"       "Mandalorion-v4.5.0"
     ## [7] "StringTie-v3.0.3"
 
 ``` r
 pacbio_only_df =  df %>% filter(grepl("pacbio", data_name)) 
 
-pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% 
+pacbio_only_rankings = pacbio_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
   pull(Program)
 
 pacbio_only_df$Program = factor(pacbio_only_df$Program, levels=pacbio_only_rankings)
@@ -126,7 +130,7 @@ ggsave(pacbio_only_plot, file="pacbio_only_plot.summary.pdf", width=6, height=6)
 ``` r
 ONT_only_df =  df %>% filter(grepl("ont_", data_name)) 
 
-ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% 
+ONT_only_rankings = ONT_only_df  %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% 
   pull(Program)
 
 ONT_only_df$Program = factor(ONT_only_df$Program, levels=ONT_only_rankings)
@@ -226,7 +230,7 @@ latest_pacbio_only_df = df %>%
 
 latest_pacbio_only_rankings = latest_pacbio_only_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(Value)) %>%
+  arrange(desc(Value)) %>%
   pull(Program)
 
 latest_pacbio_only_df$Program = factor(latest_pacbio_only_df$Program,
@@ -238,7 +242,7 @@ latest_ONT_only_df = df %>%
 
 latest_ONT_only_rankings = latest_ONT_only_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(Value)) %>%
+  arrange(desc(Value)) %>%
   pull(Program)
 
 latest_ONT_only_df$Program = factor(latest_ONT_only_df$Program,

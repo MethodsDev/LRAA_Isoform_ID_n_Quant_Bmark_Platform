@@ -8,29 +8,29 @@ expr_cors = read.csv("all_expr_correlations.tsv", header=T, sep="\t", check.name
 expr_cors %>% head()
 ```
 
-    ##            methodA LRAA-v0.17.5 ESPRESSO-v1.6.0 FLAIR-v3.0.0 FLAMES-v0.1
-    ## 1     LRAA-v0.17.5    1.0000000       0.9134285    0.9075391   0.7676347
-    ## 2  ESPRESSO-v1.6.0    0.9134285       1.0000000    0.8549684   0.8239118
-    ## 3     FLAIR-v3.0.0    0.9075391       0.8549684    1.0000000   0.7149560
-    ## 4      FLAMES-v0.1    0.7676347       0.8239118    0.7149560   1.0000000
-    ## 5 IsoQuant-v3.13.0    0.9258760       0.9205332    0.8827696   0.7925885
-    ## 6 Isosceles-v0.2.0    0.9560453       0.9330772    0.8988877   0.7845103
+    ##            methodA LRAA-v0.51.0 ESPRESSO-v1.6.0 FLAIR-v3.0.0 FLAMES-v0.1
+    ## 1     LRAA-v0.51.0    1.0000000       0.9167111    0.9052156   0.7710330
+    ## 2  ESPRESSO-v1.6.0    0.9167111       1.0000000    0.8549684   0.8239118
+    ## 3     FLAIR-v3.0.0    0.9052156       0.8549684    1.0000000   0.7149560
+    ## 4      FLAMES-v0.1    0.7710330       0.8239118    0.7149560   1.0000000
+    ## 5 IsoQuant-v3.13.0    0.9252447       0.9205332    0.8827696   0.7925885
+    ## 6 Isosceles-v0.2.0    0.9581753       0.9330772    0.8988877   0.7845103
     ##   IsoQuant-v3.13.0 Isosceles-v0.2.0 IsoSeq-v4.0.0 Mandalorion-v4.5.0
-    ## 1        0.9258760        0.9560453     0.7040137          0.7724533
+    ## 1        0.9252447        0.9581753     0.7076771          0.7764267
     ## 2        0.9205332        0.9330772     0.7823373          0.8324990
     ## 3        0.8827696        0.8988877     0.6445646          0.7094486
     ## 4        0.7925885        0.7845103     0.7849317          0.8433797
     ## 5        1.0000000        0.9468987     0.7307546          0.8023255
     ## 6        0.9468987        1.0000000     0.7253088          0.7943131
     ##   Oarfish_align-v0.9.4 Oarfish_reads-v0.9.4 Bambu-v3.12.1 StringTie-v3.0.3
-    ## 1            0.9324733            0.9360480     0.9217337        0.9219448
+    ## 1            0.9317206            0.9358222     0.9228583        0.9254801
     ## 2            0.8882734            0.8975462     0.9154531        0.9362622
     ## 3            0.9093282            0.9039575     0.8730933        0.8708460
     ## 4            0.7469785            0.7544603     0.7799729        0.7985991
     ## 5            0.9285630            0.9336526     0.9211537        0.9306266
     ## 6            0.9460687            0.9508058     0.9362070        0.9410232
     ##   TALON-v6.0        data_name
-    ## 1  0.7269040 CL_K562_E0_human
+    ## 1  0.7300127 CL_K562_E0_human
     ## 2  0.8046504 CL_K562_E0_human
     ## 3  0.6738466 CL_K562_E0_human
     ## 4  0.8132968 CL_K562_E0_human
@@ -47,14 +47,14 @@ expr_cors %>% head()
 ```
 
     ## # A tibble: 6 × 16
-    ##   methodA          `LRAA-v0.17.5` `ESPRESSO-v1.6.0` `FLAIR-v3.0.0` `FLAMES-v0.1`
+    ##   methodA          `LRAA-v0.51.0` `ESPRESSO-v1.6.0` `FLAIR-v3.0.0` `FLAMES-v0.1`
     ##   <chr>                     <dbl>             <dbl>          <dbl>         <dbl>
-    ## 1 LRAA-v0.17.5              1                 0.913          0.908         0.768
-    ## 2 ESPRESSO-v1.6.0           0.913             1              0.855         0.824
-    ## 3 FLAIR-v3.0.0              0.908             0.855          1             0.715
-    ## 4 FLAMES-v0.1               0.768             0.824          0.715         1    
-    ## 5 IsoQuant-v3.13.0          0.926             0.921          0.883         0.793
-    ## 6 Isosceles-v0.2.0          0.956             0.933          0.899         0.785
+    ## 1 LRAA-v0.51.0              1                 0.917          0.905         0.771
+    ## 2 ESPRESSO-v1.6.0           0.917             1              0.855         0.824
+    ## 3 FLAIR-v3.0.0              0.905             0.855          1             0.715
+    ## 4 FLAMES-v0.1               0.771             0.824          0.715         1    
+    ## 5 IsoQuant-v3.13.0          0.925             0.921          0.883         0.793
+    ## 6 Isosceles-v0.2.0          0.958             0.933          0.899         0.785
     ## # ℹ 11 more variables: `IsoQuant-v3.13.0` <dbl>, `Isosceles-v0.2.0` <dbl>,
     ## #   `IsoSeq-v4.0.0` <dbl>, `Mandalorion-v4.5.0` <dbl>,
     ## #   `Oarfish_align-v0.9.4` <dbl>, `Oarfish_reads-v0.9.4` <dbl>,
@@ -71,12 +71,12 @@ expr_cors %>% head()
     ## # A tibble: 6 × 5
     ##   methodA          cell_line replicate methodB      cor_val
     ##   <chr>            <chr>     <chr>     <chr>          <dbl>
-    ## 1 LRAA-v0.17.5     K562      E0        LRAA-v0.17.5   1    
-    ## 2 ESPRESSO-v1.6.0  K562      E0        LRAA-v0.17.5   0.913
-    ## 3 FLAIR-v3.0.0     K562      E0        LRAA-v0.17.5   0.908
-    ## 4 FLAMES-v0.1      K562      E0        LRAA-v0.17.5   0.768
-    ## 5 IsoQuant-v3.13.0 K562      E0        LRAA-v0.17.5   0.926
-    ## 6 Isosceles-v0.2.0 K562      E0        LRAA-v0.17.5   0.956
+    ## 1 LRAA-v0.51.0     K562      E0        LRAA-v0.51.0   1    
+    ## 2 ESPRESSO-v1.6.0  K562      E0        LRAA-v0.51.0   0.917
+    ## 3 FLAIR-v3.0.0     K562      E0        LRAA-v0.51.0   0.905
+    ## 4 FLAMES-v0.1      K562      E0        LRAA-v0.51.0   0.771
+    ## 5 IsoQuant-v3.13.0 K562      E0        LRAA-v0.51.0   0.925
+    ## 6 Isosceles-v0.2.0 K562      E0        LRAA-v0.51.0   0.958
 
 ``` r
 # determine mean cor_val across replicates
@@ -118,8 +118,12 @@ get_latest_methods = function(methods) {
   latest_versioned = method_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned = method_versions %>%
@@ -136,7 +140,7 @@ latest_methods
 
     ##  [1] "Bambu-v3.12.1"        "ESPRESSO-v1.6.0"      "FLAIR-v3.0.0"        
     ##  [4] "FLAMES-v0.1"          "IsoQuant-v3.13.0"     "IsoSeq-v4.0.0"       
-    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.17.5"         "Mandalorion-v4.5.0"  
+    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.51.0"         "Mandalorion-v4.5.0"  
     ## [10] "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4" "StringTie-v3.0.3"    
     ## [13] "TALON-v6.0"
 

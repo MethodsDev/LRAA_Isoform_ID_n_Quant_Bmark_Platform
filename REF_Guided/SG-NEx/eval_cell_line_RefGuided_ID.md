@@ -17,14 +17,14 @@ df %>% head()
 ```
 
     ## # A tibble: 6 × 5
-    ##   cell_line replicate Tool          Metric   Value
-    ##   <chr>     <chr>     <chr>         <chr>    <dbl>
-    ## 1 SGNex     A549      LRAA-v0.17.5  novelTPR 0.827
-    ## 2 SGNex     A549      LRAA-v0.17.5  novelFDR 0.421
-    ## 3 SGNex     A549      LRAA-v0.17.5  F1       0.681
-    ## 4 SGNex     A549      Bambu-v3.12.1 novelTPR 0.242
-    ## 5 SGNex     A549      Bambu-v3.12.1 novelFDR 0.263
-    ## 6 SGNex     A549      Bambu-v3.12.1 F1       0.364
+    ##   cell_line replicate Tool          Metric    Value
+    ##   <chr>     <chr>     <chr>         <chr>     <dbl>
+    ## 1 SGNex     A549      LRAA-v0.51.0  novelTPR 0.244 
+    ## 2 SGNex     A549      LRAA-v0.51.0  novelFDR 0.458 
+    ## 3 SGNex     A549      LRAA-v0.51.0  F1       0.336 
+    ## 4 SGNex     A549      Bambu-v3.12.1 novelTPR 0.0681
+    ## 5 SGNex     A549      Bambu-v3.12.1 novelFDR 0.250 
+    ## 6 SGNex     A549      Bambu-v3.12.1 F1       0.125
 
 ``` r
 df = df %>% spread(key=Metric, value=`Value`) 
@@ -36,14 +36,14 @@ df %>% head()
 ```
 
     ## # A tibble: 6 × 6
-    ##   cell_line replicate Tool                F1 Recall Precision
-    ##   <chr>     <chr>     <chr>            <dbl>  <dbl>     <dbl>
-    ## 1 SGNex     A549      Bambu-v3.12.1    0.364  0.242     0.737
-    ## 2 SGNex     A549      ESPRESSO-v1.6.0  0.390  0.295     0.577
-    ## 3 SGNex     A549      FLAIR-v3.0.0     0.141  0.123     0.165
-    ## 4 SGNex     A549      FLAMES-v0.1      0.442  0.336     0.648
-    ## 5 SGNex     A549      IsoQuant-v3.13.0 0.648  0.510     0.890
-    ## 6 SGNex     A549      Isosceles        0.262  0.163     0.656
+    ##   cell_line replicate Tool                 F1 Recall Precision
+    ##   <chr>     <chr>     <chr>             <dbl>  <dbl>     <dbl>
+    ## 1 SGNex     A549      Bambu-v3.12.1    0.125  0.0681     0.750
+    ## 2 SGNex     A549      ESPRESSO-v1.6.0  0.145  0.0829     0.585
+    ## 3 SGNex     A549      FLAIR-v3.0.0     0.0576 0.0347     0.169
+    ## 4 SGNex     A549      FLAMES-v0.1      0.165  0.0943     0.659
+    ## 5 SGNex     A549      IsoQuant-v3.13.0 0.247  0.143      0.899
+    ## 6 SGNex     A549      Isosceles        0.0859 0.0459     0.660
 
 ``` r
 df = df %>% dplyr::select(Tool, F1, Recall, Precision, cell_line, replicate) %>%
@@ -53,18 +53,18 @@ df %>% head()
 ```
 
     ## # A tibble: 6 × 5
-    ##   Tool             cell_line replicate Metric   Val
-    ##   <chr>            <chr>     <chr>     <chr>  <dbl>
-    ## 1 Bambu-v3.12.1    SGNex     A549      F1     0.364
-    ## 2 ESPRESSO-v1.6.0  SGNex     A549      F1     0.390
-    ## 3 FLAIR-v3.0.0     SGNex     A549      F1     0.141
-    ## 4 FLAMES-v0.1      SGNex     A549      F1     0.442
-    ## 5 IsoQuant-v3.13.0 SGNex     A549      F1     0.648
-    ## 6 Isosceles        SGNex     A549      F1     0.262
+    ##   Tool             cell_line replicate Metric    Val
+    ##   <chr>            <chr>     <chr>     <chr>   <dbl>
+    ## 1 Bambu-v3.12.1    SGNex     A549      F1     0.125 
+    ## 2 ESPRESSO-v1.6.0  SGNex     A549      F1     0.145 
+    ## 3 FLAIR-v3.0.0     SGNex     A549      F1     0.0576
+    ## 4 FLAMES-v0.1      SGNex     A549      F1     0.165 
+    ## 5 IsoQuant-v3.13.0 SGNex     A549      F1     0.247 
+    ## 6 Isosceles        SGNex     A549      F1     0.0859
 
 ``` r
 prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
-  summarize(mean_F1 = mean(Val)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Tool)
+  summarize(mean_F1 = mean(Val)) %>% arrange(desc(mean_F1)) %>% pull(Tool)
 
 
 df$Tool = factor(df$Tool, levels=prog_ranking)
@@ -92,8 +92,12 @@ get_latest_tools = function(data_df) {
   latest_versioned_tools = tool_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool_Base) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_tools = tool_versions %>%
@@ -109,7 +113,7 @@ latest_tools
 ```
 
     ## [1] "Bambu-v3.12.1"    "ESPRESSO-v1.6.0"  "FLAIR-v3.0.0"     "FLAMES-v0.1"     
-    ## [5] "IsoQuant-v3.13.0" "LRAA-v0.17.5"     "StringTie-v3.0.3" "TALON-v6.0"      
+    ## [5] "IsoQuant-v3.13.0" "LRAA-v0.51.0"     "StringTie-v3.0.3" "TALON-v6.0"      
     ## [9] "Isosceles"
 
 ``` r
@@ -185,7 +189,7 @@ get_ranked_tile_plot = function(cell_line_val, data_df = df) {
     filter(Metric == "F1") %>% 
     group_by(Tool) %>%
     summarize(mean_F1 = mean(Val)) %>%
-    arrange(dplyr::desc(mean_F1)) %>% 
+    arrange(desc(mean_F1)) %>% 
     pull(Tool)
   
   ranked_df$Tool = factor(ranked_df$Tool, levels=ranked_progs)

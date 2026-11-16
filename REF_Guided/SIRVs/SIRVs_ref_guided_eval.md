@@ -20,10 +20,10 @@ df %>% head()
     ## # A tibble: 6 × 5
     ##   cell_line sirv_set Program       Metric    Value
     ##   <chr>     <chr>    <chr>         <chr>     <dbl>
-    ## 1 K562      E0       LRAA-v0.17.5  knownTPR 1     
-    ## 2 K562      E0       LRAA-v0.17.5  novelTPR 0.963 
-    ## 3 K562      E0       LRAA-v0.17.5  novelFDR 0.0877
-    ## 4 K562      E0       LRAA-v0.17.5  F1       0.937 
+    ## 1 K562      E0       LRAA-v0.51.0  knownTPR 1     
+    ## 2 K562      E0       LRAA-v0.51.0  novelTPR 0.981 
+    ## 3 K562      E0       LRAA-v0.51.0  novelFDR 0.0702
+    ## 4 K562      E0       LRAA-v0.51.0  F1       0.955 
     ## 5 K562      E0       Bambu-v3.12.1 knownTPR 1     
     ## 6 K562      E0       Bambu-v3.12.1 novelTPR 0.574
 
@@ -40,7 +40,7 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 ``` r
 # define ranking
 
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=prog_ranking)
 ```
@@ -114,7 +114,7 @@ get_ranked_df = function(sirv_set_val, data_df = df) {
   ranked_df = data_df %>%  filter(sirv_set == sirv_set_val) 
 
   ranked_progs = ranked_df %>% filter(Metric == "F1") %>% group_by(Program)  %>% 
-    summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+    summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
   ranked_df$Program = factor(ranked_df$Program, levels=ranked_progs)
 
@@ -311,8 +311,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -329,7 +333,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"      "ESPRESSO-v1.6.0"    "FLAIR-v3.0.0"      
     ##  [4] "FLAMES-v0.1"        "IsoQuant-v3.13.0"   "IsoSeq-v4.0.0"     
-    ##  [7] "LRAA-v0.17.5"       "Mandalorion-v4.5.0" "StringTie-v3.0.3"  
+    ##  [7] "LRAA-v0.51.0"       "Mandalorion-v4.5.0" "StringTie-v3.0.3"  
     ## [10] "TALON-v6.0"         "Isosceles"
 
 ``` r
@@ -340,7 +344,7 @@ latest_program_ranking = latest_program_df %>%
   filter(Metric == "F1") %>%
   group_by(Program) %>%
   summarize(mean_F1 = mean(Value), .groups = "drop") %>%
-  arrange(dplyr::desc(mean_F1)) %>%
+  arrange(desc(mean_F1)) %>%
   pull(Program)
 
 latest_program_df$Program = factor(latest_program_df$Program,

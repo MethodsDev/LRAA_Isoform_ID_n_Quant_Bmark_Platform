@@ -16,7 +16,7 @@ mouse_pearson_cor_df %>% head()
 
     ##                   name cor_value data_name
     ## 1         FLAIR-v3.0.0 0.9988180      e000
-    ## 2         LRAA-v0.17.5 0.9956509      e000
+    ## 2         LRAA-v0.51.0 0.9955413      e000
     ## 3 Oarfish_align-v0.9.4 0.9933449      e000
     ## 4 Oarfish_reads-v0.9.4 0.9920026      e000
     ## 5        Bambu-v3.12.1 0.9903698      e000
@@ -24,7 +24,7 @@ mouse_pearson_cor_df %>% head()
 
 ``` r
 # rank according to mean cor val
-pearson_cor_df_ranking = mouse_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+pearson_cor_df_ranking = mouse_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 mouse_pearson_cor_df$name = factor(mouse_pearson_cor_df$name, levels=pearson_cor_df_ranking)
@@ -52,7 +52,7 @@ mouse_spearman_cor_df %>% head()
 
     ##                   name cor_value data_name
     ## 1         FLAIR-v3.0.0 0.9971622      e000
-    ## 2         LRAA-v0.17.5 0.9931668      e000
+    ## 2         LRAA-v0.51.0 0.9928843      e000
     ## 3 Oarfish_align-v0.9.4 0.9893334      e000
     ## 4        Bambu-v3.12.1 0.9891421      e000
     ## 5     IsoQuant-v3.13.0 0.9873505      e000
@@ -60,7 +60,7 @@ mouse_spearman_cor_df %>% head()
 
 ``` r
 # rank according to mean cor val
-spearman_cor_df_ranking = mouse_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+spearman_cor_df_ranking = mouse_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 mouse_spearman_cor_df$name = factor(mouse_spearman_cor_df$name, levels=pearson_cor_df_ranking)
@@ -89,8 +89,8 @@ mouse_median_rel_diff %>% head()
 
     ##                   name     rel_diff data_name
     ## 1         FLAIR-v3.0.0 3.282881e-05      e000
-    ## 2         LRAA-v0.17.5 2.173388e-03      e000
-    ## 3        Bambu-v3.12.1 2.664383e-03      e000
+    ## 2        Bambu-v3.12.1 2.664383e-03      e000
+    ## 3         LRAA-v0.51.0 3.814030e-03      e000
     ## 4 Oarfish_reads-v0.9.4 4.094611e-03      e000
     ## 5 Oarfish_align-v0.9.4 5.385316e-03      e000
     ## 6      ESPRESSO-v1.6.0 1.535951e-02      e000
@@ -135,7 +135,7 @@ mouse_mean_rel_diff %>% head()
 
     ##                   name   rel_diff data_name
     ## 1         FLAIR-v3.0.0 0.01378006      e000
-    ## 2         LRAA-v0.17.5 0.04062281      e000
+    ## 2         LRAA-v0.51.0 0.04496585      e000
     ## 3 Oarfish_align-v0.9.4 0.05123714      e000
     ## 4 Oarfish_reads-v0.9.4 0.05749356      e000
     ## 5        Bambu-v3.12.1 0.05924361      e000
@@ -180,8 +180,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -198,7 +202,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"        "ESPRESSO-v1.6.0"      "FLAIR-v3.0.0"        
     ##  [4] "FLAMES-v0.1"          "IsoQuant-v3.13.0"     "IsoSeq-v4.0.0"       
-    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.17.5"         "Mandalorion-v4.5.0"  
+    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.51.0"         "Mandalorion-v4.5.0"  
     ## [10] "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4" "StringTie-v3.0.3"    
     ## [13] "TALON-v6.0"
 
@@ -519,14 +523,14 @@ mouse_oarfish_metrics_df %>% head()
 
     ##                   name       color  spearman pearson_log1p ccc_log1p   kendall
     ## 1         FLAIR-v3.0.0        pink 0.9971622     0.9988180 0.9988171 0.9954567
-    ## 2         LRAA-v0.17.5        teal 0.9931668     0.9956509 0.9956507 0.9879219
+    ## 2         LRAA-v0.51.0        teal 0.9928843     0.9955413 0.9955410 0.9870459
     ## 3 Oarfish_align-v0.9.4       khaki 0.9893334     0.9933449 0.9933165 0.9808146
     ## 4 Oarfish_reads-v0.9.4   peachpuff 0.9870225     0.9920026 0.9919562 0.9777275
     ## 5        Bambu-v3.12.1 forestgreen 0.9891421     0.9903698 0.9903675 0.9801519
     ## 6     IsoQuant-v3.13.0        blue 0.9873505     0.9895058 0.9895016 0.9815201
     ##        rmse nrmse_mean_truth        mard    pr_auc average_precision n_scored
     ## 1  2.708981        0.2354971 0.004454203 0.9984479         0.9982846    86932
-    ## 2 10.111970        0.8790538 0.013165310 0.9975317         0.9969038    86932
+    ## 2  9.515694        0.8272183 0.014572574 0.9975893         0.9968688    86932
     ## 3  7.293536        0.6340416 0.016504481 0.9981875         0.9967518    86932
     ## 4  7.471337        0.6494983 0.018516824 0.9979374         0.9961798    86932
     ## 5 16.212440        1.4093798 0.019158107 0.9967556         0.9956321    86932
@@ -588,7 +592,7 @@ mouse_oarfish_metric_rankings = mouse_oarfish_metrics_long %>%
   mutate(
     metric_rank = if_else(
       direction == "higher is better",
-      min_rank(dplyr::desc(metric_value)),
+      min_rank(desc(metric_value)),
       min_rank(metric_value)
     )
   ) %>%

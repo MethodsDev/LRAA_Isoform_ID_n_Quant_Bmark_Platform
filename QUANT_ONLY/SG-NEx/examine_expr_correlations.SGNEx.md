@@ -8,22 +8,22 @@ expr_cors = read.csv("all_expr_correlations.tsv", header=T, sep="\t", check.name
 expr_cors %>% head()
 ```
 
-    ##            methodA LRAA-v0.17.5 ESPRESSO-v1.6.0 FLAIR-v3.0.0 FLAMES-v0.1
-    ## 1     LRAA-v0.17.5    1.0000000       0.7164237    0.8007954   0.4707857
-    ## 2  ESPRESSO-v1.6.0    0.7164237       1.0000000    0.6593648   0.6221687
-    ## 3     FLAIR-v3.0.0    0.8007954       0.6593648    1.0000000   0.4203000
-    ## 4      FLAMES-v0.1    0.4707857       0.6221687    0.4203000   1.0000000
-    ## 5 IsoQuant-v3.13.0    0.7269125       0.7169427    0.7023915   0.5487129
-    ## 6 Isosceles-v0.2.0    0.9199747       0.7469162    0.8206420   0.4796530
+    ##            methodA LRAA-v0.51.0 ESPRESSO-v1.6.0 FLAIR-v3.0.0 FLAMES-v0.1
+    ## 1     LRAA-v0.51.0    1.0000000       0.7133214    0.8078488   0.4639223
+    ## 2  ESPRESSO-v1.6.0    0.7133214       1.0000000    0.6593648   0.6221687
+    ## 3     FLAIR-v3.0.0    0.8078488       0.6593648    1.0000000   0.4203000
+    ## 4      FLAMES-v0.1    0.4639223       0.6221687    0.4203000   1.0000000
+    ## 5 IsoQuant-v3.13.0    0.7502730       0.7169427    0.7023915   0.5487129
+    ## 6 Isosceles-v0.2.0    0.9032725       0.7469162    0.8206420   0.4796530
     ##   IsoQuant-v3.13.0 Isosceles-v0.2.0 Oarfish_align-v0.9.4 Oarfish_reads-v0.9.4
-    ## 1        0.7269125        0.9199747            0.8927271            0.8796083
+    ## 1        0.7502730        0.9032725            0.8745283            0.8635328
     ## 2        0.7169427        0.7469162            0.7234548            0.7328866
     ## 3        0.7023915        0.8206420            0.7908332            0.7677964
     ## 4        0.5487129        0.4796530            0.4846047            0.4935253
     ## 5        1.0000000        0.7233110            0.7245836            0.7347346
     ## 6        0.7233110        1.0000000            0.8955489            0.8907140
     ##   Bambu-v3.12.1 StringTie-v3.0.3 TALON-v6.0  data_name
-    ## 1     0.8505476        0.7951318  0.5705826 SGNex_A549
+    ## 1     0.8324966        0.7878957  0.5601633 SGNex_A549
     ## 2     0.7440078        0.8565599  0.7033502 SGNex_A549
     ## 3     0.7366573        0.7022891  0.4810033 SGNex_A549
     ## 4     0.4844954        0.5723086  0.4849076 SGNex_A549
@@ -39,14 +39,14 @@ expr_cors %>% head()
 ```
 
     ## # A tibble: 6 × 13
-    ##   methodA          `LRAA-v0.17.5` `ESPRESSO-v1.6.0` `FLAIR-v3.0.0` `FLAMES-v0.1`
+    ##   methodA          `LRAA-v0.51.0` `ESPRESSO-v1.6.0` `FLAIR-v3.0.0` `FLAMES-v0.1`
     ##   <chr>                     <dbl>             <dbl>          <dbl>         <dbl>
-    ## 1 LRAA-v0.17.5              1                 0.716          0.801         0.471
-    ## 2 ESPRESSO-v1.6.0           0.716             1              0.659         0.622
-    ## 3 FLAIR-v3.0.0              0.801             0.659          1             0.420
-    ## 4 FLAMES-v0.1               0.471             0.622          0.420         1    
-    ## 5 IsoQuant-v3.13.0          0.727             0.717          0.702         0.549
-    ## 6 Isosceles-v0.2.0          0.920             0.747          0.821         0.480
+    ## 1 LRAA-v0.51.0              1                 0.713          0.808         0.464
+    ## 2 ESPRESSO-v1.6.0           0.713             1              0.659         0.622
+    ## 3 FLAIR-v3.0.0              0.808             0.659          1             0.420
+    ## 4 FLAMES-v0.1               0.464             0.622          0.420         1    
+    ## 5 IsoQuant-v3.13.0          0.750             0.717          0.702         0.549
+    ## 6 Isosceles-v0.2.0          0.903             0.747          0.821         0.480
     ## # ℹ 8 more variables: `IsoQuant-v3.13.0` <dbl>, `Isosceles-v0.2.0` <dbl>,
     ## #   `Oarfish_align-v0.9.4` <dbl>, `Oarfish_reads-v0.9.4` <dbl>,
     ## #   `Bambu-v3.12.1` <dbl>, `StringTie-v3.0.3` <dbl>, `TALON-v6.0` <dbl>,
@@ -62,12 +62,12 @@ expr_cors %>% head()
     ## # A tibble: 6 × 4
     ##   methodA          cell_line methodB          R
     ##   <chr>            <chr>     <chr>        <dbl>
-    ## 1 LRAA-v0.17.5     A549      LRAA-v0.17.5 1    
-    ## 2 ESPRESSO-v1.6.0  A549      LRAA-v0.17.5 0.716
-    ## 3 FLAIR-v3.0.0     A549      LRAA-v0.17.5 0.801
-    ## 4 FLAMES-v0.1      A549      LRAA-v0.17.5 0.471
-    ## 5 IsoQuant-v3.13.0 A549      LRAA-v0.17.5 0.727
-    ## 6 Isosceles-v0.2.0 A549      LRAA-v0.17.5 0.920
+    ## 1 LRAA-v0.51.0     A549      LRAA-v0.51.0 1    
+    ## 2 ESPRESSO-v1.6.0  A549      LRAA-v0.51.0 0.713
+    ## 3 FLAIR-v3.0.0     A549      LRAA-v0.51.0 0.808
+    ## 4 FLAMES-v0.1      A549      LRAA-v0.51.0 0.464
+    ## 5 IsoQuant-v3.13.0 A549      LRAA-v0.51.0 0.750
+    ## 6 Isosceles-v0.2.0 A549      LRAA-v0.51.0 0.903
 
 ``` r
 # determine mean cor_val across replicates
@@ -109,8 +109,12 @@ get_latest_methods = function(methods) {
   latest_versioned = method_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned = method_versions %>%
@@ -127,7 +131,7 @@ latest_methods
 
     ##  [1] "Bambu-v3.12.1"        "ESPRESSO-v1.6.0"      "FLAIR-v3.0.0"        
     ##  [4] "FLAMES-v0.1"          "IsoQuant-v3.13.0"     "Isosceles-v0.2.0"    
-    ##  [7] "LRAA-v0.17.5"         "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4"
+    ##  [7] "LRAA-v0.51.0"         "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4"
     ## [10] "StringTie-v3.0.3"     "TALON-v6.0"
 
 ``` r

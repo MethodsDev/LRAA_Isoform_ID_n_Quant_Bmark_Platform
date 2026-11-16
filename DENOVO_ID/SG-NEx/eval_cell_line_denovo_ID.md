@@ -20,12 +20,12 @@ df %>% head()
 ```
 
     ##            Tool  data_name   Metric     Value
-    ## 1  LRAA-v0.17.5 SGNex_A549 knownTPR 0.7888474
-    ## 2  LRAA-v0.17.5 SGNex_A549 novelFDR 0.3093107
-    ## 3  LRAA-v0.17.5 SGNex_A549       F1 0.7365122
-    ## 4 Bambu-v3.12.1 SGNex_A549 knownTPR 0.5226943
-    ## 5 Bambu-v3.12.1 SGNex_A549 novelFDR 0.5472446
-    ## 6 Bambu-v3.12.1 SGNex_A549       F1 0.4852176
+    ## 1  LRAA-v0.51.0 SGNex_A549 knownTPR 0.2506480
+    ## 2  LRAA-v0.51.0 SGNex_A549 novelFDR 0.3349503
+    ## 3  LRAA-v0.51.0 SGNex_A549       F1 0.3640795
+    ## 4 Bambu-v3.12.1 SGNex_A549 knownTPR 0.1585671
+    ## 5 Bambu-v3.12.1 SGNex_A549 novelFDR 0.5391135
+    ## 6 Bambu-v3.12.1 SGNex_A549       F1 0.2359545
 
 ``` r
 df = df %>% spread(key=Metric, value=Value) 
@@ -38,12 +38,12 @@ df %>% head()
 ```
 
     ##               Tool  data_name Metric       Val
-    ## 1    Bambu-v3.12.1 SGNex_A549     F1 0.4852176
-    ## 2    Bambu-v3.12.1 SGNex_MCF7     F1 0.5698842
-    ## 3  ESPRESSO-v1.6.0 SGNex_A549     F1 0.4507818
-    ## 4  ESPRESSO-v1.6.0 SGNex_MCF7     F1 0.4493305
-    ## 5 IsoQuant-v3.13.0 SGNex_A549     F1 0.6498326
-    ## 6 IsoQuant-v3.13.0 SGNex_MCF7     F1 0.6742834
+    ## 1    Bambu-v3.12.1 SGNex_A549     F1 0.2359545
+    ## 2    Bambu-v3.12.1 SGNex_MCF7     F1 0.2434807
+    ## 3  ESPRESSO-v1.6.0 SGNex_A549     F1 0.1759779
+    ## 4  ESPRESSO-v1.6.0 SGNex_MCF7     F1 0.1432209
+    ## 5 IsoQuant-v3.13.0 SGNex_A549     F1 0.2622202
+    ## 6 IsoQuant-v3.13.0 SGNex_MCF7     F1 0.2343924
 
 ``` r
 df2 = df %>% spread(key=Metric, value=Val) %>% mutate(F2 = 2 * (Precision * Recall) / (Precision + Recall) )
@@ -51,21 +51,21 @@ df2 = df %>% spread(key=Metric, value=Val) %>% mutate(F2 = 2 * (Precision * Reca
 df2
 ```
 
-    ##                Tool  data_name        F1 Precision    Recall        F2
-    ## 1     Bambu-v3.12.1 SGNex_A549 0.4852176 0.4527554 0.5226943 0.4852176
-    ## 2     Bambu-v3.12.1 SGNex_MCF7 0.5698842 0.5314479 0.6143137 0.5698842
-    ## 3   ESPRESSO-v1.6.0 SGNex_A549 0.4507818 0.7064474 0.3309940 0.4507818
-    ## 4   ESPRESSO-v1.6.0 SGNex_MCF7 0.4493305 0.8566870 0.3045272 0.4493305
-    ## 5  IsoQuant-v3.13.0 SGNex_A549 0.6498326 0.9159151 0.5035472 0.6498326
-    ## 6  IsoQuant-v3.13.0 SGNex_MCF7 0.6742834 0.9574953 0.5203671 0.6742834
-    ## 7      LRAA-v0.17.5 SGNex_A549 0.7365122 0.6906893 0.7888474 0.7365122
-    ## 8      LRAA-v0.17.5 SGNex_MCF7 0.7736006 0.7354527 0.8159225 0.7736006
-    ## 9  StringTie-v3.0.3 SGNex_A549 0.7340121 0.6460387 0.8497216 0.7340121
-    ## 10 StringTie-v3.0.3 SGNex_MCF7 0.7255470 0.6388104 0.8395380 0.7255470
+    ##                Tool  data_name        F1 Precision     Recall        F2
+    ## 1     Bambu-v3.12.1 SGNex_A549 0.2359545 0.4608865 0.15856706 0.2359545
+    ## 2     Bambu-v3.12.1 SGNex_MCF7 0.2434807 0.5353163 0.15757592 0.2434807
+    ## 3   ESPRESSO-v1.6.0 SGNex_A549 0.1759779 0.7111949 0.10041192 0.1759779
+    ## 4   ESPRESSO-v1.6.0 SGNex_MCF7 0.1432209 0.8601806 0.07811343 0.1432209
+    ## 5  IsoQuant-v3.13.0 SGNex_A549 0.2622202 0.9251577 0.15275849 0.2622202
+    ## 6  IsoQuant-v3.13.0 SGNex_MCF7 0.2343924 0.9607768 0.13347794 0.2343924
+    ## 7      LRAA-v0.51.0 SGNex_A549 0.3640795 0.6650497 0.25064797 0.3640795
+    ## 8      LRAA-v0.51.0 SGNex_MCF7 0.3319729 0.7262500 0.21516242 0.3319729
+    ## 9  StringTie-v3.0.3 SGNex_A549 0.3723301 0.6701360 0.25777562 0.3723301
+    ## 10 StringTie-v3.0.3 SGNex_MCF7 0.3252822 0.6645172 0.21534758 0.3252822
 
 ``` r
 prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
-  summarize(mean_F1 = mean(Val)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Tool)
+  summarize(mean_F1 = mean(Val)) %>% arrange(desc(mean_F1)) %>% pull(Tool)
 
 
 df$Tool = factor(df$Tool, levels=prog_ranking)
@@ -93,8 +93,12 @@ get_latest_tools = function(data_df) {
   latest_versioned_tools = tool_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool_Base) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_tools = tool_versions %>%
@@ -109,7 +113,7 @@ latest_tools = get_latest_tools(df)
 latest_tools
 ```
 
-    ## [1] "Bambu-v3.12.1"    "ESPRESSO-v1.6.0"  "IsoQuant-v3.13.0" "LRAA-v0.17.5"    
+    ## [1] "Bambu-v3.12.1"    "ESPRESSO-v1.6.0"  "IsoQuant-v3.13.0" "LRAA-v0.51.0"    
     ## [5] "StringTie-v3.0.3"
 
 ``` r
@@ -159,7 +163,7 @@ get_ranked_tile_plot_denovo = function(data_name_val, data_df = df) {
   # Rank programs by F1 score for this cell line
   ranked_progs = ranked_df %>% 
     filter(Metric == "F1") %>% 
-    arrange(dplyr::desc(Val)) %>% 
+    arrange(desc(Val)) %>% 
     pull(Tool)
   
   ranked_df$Tool = factor(ranked_df$Tool, levels=ranked_progs)

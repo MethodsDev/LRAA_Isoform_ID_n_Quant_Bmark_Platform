@@ -20,7 +20,7 @@ SIRVs_pearson_cor_df %>% head()
     ## # A tibble: 6 × 4
     ##   name             cor_value cell_line sirv_set
     ##   <chr>                <dbl> <chr>     <chr>   
-    ## 1 LRAA-v0.17.5         0.196 K562      E0      
+    ## 1 LRAA-v0.51.0         0.194 K562      E0      
     ## 2 ESPRESSO-v1.6.0      0.188 K562      E0      
     ## 3 FLAIR-v3.0.0         0.156 K562      E0      
     ## 4 Isosceles-v0.2.0     0.153 K562      E0      
@@ -31,7 +31,7 @@ SIRVs_pearson_cor_df %>% head()
 # rank according to mean cor val
 pearson_cor_df_ranking = SIRVs_pearson_cor_df %>% 
   filter(sirv_set != "E0") %>%
-  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 SIRVs_pearson_cor_df$name = factor(SIRVs_pearson_cor_df$name, levels=pearson_cor_df_ranking)
@@ -70,14 +70,14 @@ SIRVs_spearman_cor_df %>% head()
     ## 2 ESPRESSO-v1.6.0          0.222 K562      E0      
     ## 3 Oarfish_reads-v0.9.4     0.222 K562      E0      
     ## 4 Isosceles-v0.2.0         0.222 K562      E0      
-    ## 5 LRAA-v0.17.5             0.222 K562      E0      
+    ## 5 LRAA-v0.51.0             0.222 K562      E0      
     ## 6 Bambu-v3.12.1            0.222 K562      E0
 
 ``` r
 # rank according to mean cor val
 spearman_cor_df_ranking = SIRVs_spearman_cor_df %>% 
   filter(sirv_set != "E0") %>%
-  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+  group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 SIRVs_spearman_cor_df$name = factor(SIRVs_spearman_cor_df$name, levels=pearson_cor_df_ranking)
@@ -112,7 +112,7 @@ SIRVs_median_rel_diff %>% head()
     ## # A tibble: 6 × 4
     ##   name                 rel_diff cell_line sirv_set
     ##   <chr>                   <dbl> <chr>     <chr>   
-    ## 1 LRAA-v0.17.5            0.222 K562      E0      
+    ## 1 LRAA-v0.51.0            0.222 K562      E0      
     ## 2 Oarfish_reads-v0.9.4    0.251 K562      E0      
     ## 3 Oarfish_align-v0.9.4    0.253 K562      E0      
     ## 4 Bambu-v3.12.1           0.257 K562      E0      
@@ -188,7 +188,7 @@ SIRVs_mean_rel_diff %>% head()
     ## # A tibble: 6 × 4
     ##   name                 rel_diff cell_line sirv_set
     ##   <chr>                   <dbl> <chr>     <chr>   
-    ## 1 LRAA-v0.17.5            0.344 K562      E0      
+    ## 1 LRAA-v0.51.0            0.345 K562      E0      
     ## 2 ESPRESSO-v1.6.0         0.350 K562      E0      
     ## 3 Isosceles-v0.2.0        0.360 K562      E0      
     ## 4 Oarfish_align-v0.9.4    0.375 K562      E0      
@@ -235,8 +235,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -253,7 +257,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"        "ESPRESSO-v1.6.0"      "FLAIR-v3.0.0"        
     ##  [4] "FLAMES-v0.1"          "IsoQuant-v3.13.0"     "IsoSeq-v4.0.0"       
-    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.17.5"         "Mandalorion-v4.5.0"  
+    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.51.0"         "Mandalorion-v4.5.0"  
     ## [10] "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4" "StringTie-v3.0.3"    
     ## [13] "TALON-v6.0"
 
@@ -302,9 +306,9 @@ SIRVs_mean_mean_rel_diff %>% head()
     ## # Groups:   name [2]
     ##   name            sirv_set mean_mean_rel_diff
     ##   <fct>           <chr>                 <dbl>
-    ## 1 LRAA-v0.17.5    E0                    0.362
-    ## 2 LRAA-v0.17.5    E1                    0.368
-    ## 3 LRAA-v0.17.5    E2                    0.380
+    ## 1 LRAA-v0.51.0    E0                    0.364
+    ## 2 LRAA-v0.51.0    E1                    0.370
+    ## 3 LRAA-v0.51.0    E2                    0.378
     ## 4 ESPRESSO-v1.6.0 E0                    0.370
     ## 5 ESPRESSO-v1.6.0 E1                    0.380
     ## 6 ESPRESSO-v1.6.0 E2                    0.405
@@ -507,7 +511,7 @@ SIRVs_oarfish_metrics_df %>% head()
     ## # A tibble: 6 × 16
     ##   name     color spearman pearson_log1p ccc_log1p kendall  rmse nrmse_mean_truth
     ##   <chr>    <chr>    <dbl>         <dbl>     <dbl>   <dbl> <dbl>            <dbl>
-    ## 1 LRAA-v0… teal     0.222         0.196    0.0576   0.183 6604.            0.396
+    ## 1 LRAA-v0… teal     0.222         0.194    0.0567   0.183 6638.            0.398
     ## 2 ESPRESS… brown    0.222         0.188    0.0549   0.183 6777.            0.407
     ## 3 FLAIR-v… pink     0.214         0.156    0.0399   0.176 7066.            0.424
     ## 4 Isoscel… red      0.222         0.153    0.0331   0.183 6913.            0.415
@@ -572,7 +576,7 @@ if (nrow(SIRVs_oarfish_metrics_long) > 0) {
     mutate(
       metric_rank = if_else(
         direction == "higher is better",
-        min_rank(dplyr::desc(metric_value)),
+        min_rank(desc(metric_value)),
         min_rank(metric_value)
       )
     ) %>%

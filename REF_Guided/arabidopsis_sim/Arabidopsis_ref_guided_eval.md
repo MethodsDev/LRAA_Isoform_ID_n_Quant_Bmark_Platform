@@ -14,8 +14,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -51,10 +55,10 @@ df %>% head()
 ```
 
     ##   data_name       Program   Metric      Value
-    ## 1      e000  LRAA-v0.17.5 knownTPR 0.97931469
-    ## 2      e000  LRAA-v0.17.5 novelTPR 0.92356349
-    ## 3      e000  LRAA-v0.17.5 novelFDR 0.01266994
-    ## 4      e000  LRAA-v0.17.5       F1 0.95438283
+    ## 1      e000  LRAA-v0.51.0 knownTPR 0.99673390
+    ## 2      e000  LRAA-v0.51.0 novelTPR 0.94000932
+    ## 3      e000  LRAA-v0.51.0 novelFDR 0.01175976
+    ## 4      e000  LRAA-v0.51.0       F1 0.96352158
     ## 5      e000 Bambu-v3.12.1 knownTPR 0.99919780
     ## 6      e000 Bambu-v3.12.1 novelTPR 0.29635795
 
@@ -71,7 +75,7 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 ``` r
 # define ranking
 
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=prog_ranking)
 ```
@@ -142,7 +146,7 @@ get_ranked_df = function(data_name_val, data_df = df) {
 
   ranked_df = data_df %>%  filter(data_name == data_name_val) 
 
-  ranked_progs = ranked_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% pull(Program)
+  ranked_progs = ranked_df %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% pull(Program)
 
   ranked_df$Program = factor(ranked_df$Program, levels=ranked_progs)
 
@@ -337,7 +341,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"      "ESPRESSO-v1.6.0"    "FLAIR-v3.0.0"      
     ##  [4] "FLAMES-v0.1"        "IsoQuant-v3.13.0"   "IsoSeq-v4.0.0"     
-    ##  [7] "LRAA-v0.17.5"       "Mandalorion-v4.5.0" "StringTie-v3.0.3"  
+    ##  [7] "LRAA-v0.51.0"       "Mandalorion-v4.5.0" "StringTie-v3.0.3"  
     ## [10] "TALON-v6.0"         "Isosceles"
 
 ``` r
@@ -348,7 +352,7 @@ latest_program_ranking = latest_program_df %>%
   filter(Metric == "F1") %>%
   group_by(Program) %>%
   summarize(mean_F1 = mean(Value), .groups = "drop") %>%
-  arrange(dplyr::desc(mean_F1)) %>%
+  arrange(desc(mean_F1)) %>%
   pull(Program)
 
 latest_program_df$Program = factor(latest_program_df$Program,

@@ -19,12 +19,12 @@ df %>% head()
     ## # A tibble: 6 × 5
     ##   cell_line replicate Tool          Metric    Value
     ##   <chr>     <chr>     <chr>         <chr>     <dbl>
-    ## 1 K562      E0        LRAA-v0.17.5  knownTPR 0.633 
-    ## 2 K562      E0        LRAA-v0.17.5  novelFDR 0.0609
-    ## 3 K562      E0        LRAA-v0.17.5  F1       0.756 
-    ## 4 K562      E0        Bambu-v3.12.1 knownTPR 0.396 
-    ## 5 K562      E0        Bambu-v3.12.1 novelFDR 0.0137
-    ## 6 K562      E0        Bambu-v3.12.1 F1       0.565
+    ## 1 K562      E0        LRAA-v0.51.0  knownTPR 0.381 
+    ## 2 K562      E0        LRAA-v0.51.0  novelFDR 0.0711
+    ## 3 K562      E0        LRAA-v0.51.0  F1       0.540 
+    ## 4 K562      E0        Bambu-v3.12.1 knownTPR 0.226 
+    ## 5 K562      E0        Bambu-v3.12.1 novelFDR 0.0148
+    ## 6 K562      E0        Bambu-v3.12.1 F1       0.368
 
 ``` r
 df = df %>% spread(key=Metric, value=`Value`) 
@@ -38,12 +38,12 @@ df %>% head()
     ## # A tibble: 6 × 6
     ##   cell_line replicate Tool                  F1 Recall Precision
     ##   <chr>     <chr>     <chr>              <dbl>  <dbl>     <dbl>
-    ## 1 BT474     E0        Bambu-v3.12.1      0.605  0.436    0.986 
-    ## 2 BT474     E0        ESPRESSO-v1.6.0    0.796  0.711    0.902 
-    ## 3 BT474     E0        IsoQuant-v3.13.0   0.630  0.474    0.941 
-    ## 4 BT474     E0        IsoSeq-v4.0.0      0.124  0.962    0.0660
-    ## 5 BT474     E0        LRAA-v0.17.5       0.775  0.657    0.945 
-    ## 6 BT474     E0        Mandalorion-v4.5.0 0.625  0.466    0.948
+    ## 1 BT474     E0        Bambu-v3.12.1      0.405  0.255    0.984 
+    ## 2 BT474     E0        ESPRESSO-v1.6.0    0.572  0.416    0.920 
+    ## 3 BT474     E0        IsoQuant-v3.13.0   0.428  0.277    0.942 
+    ## 4 BT474     E0        IsoSeq-v4.0.0      0.118  0.562    0.0662
+    ## 5 BT474     E0        LRAA-v0.51.0       0.564  0.404    0.934 
+    ## 6 BT474     E0        Mandalorion-v4.5.0 0.423  0.272    0.948
 
 ``` r
 df = df %>% dplyr::select(Tool, F1, Recall, Precision, cell_line, replicate) %>%
@@ -55,16 +55,16 @@ df %>% head()
     ## # A tibble: 6 × 5
     ##   Tool               cell_line replicate Metric   Val
     ##   <chr>              <chr>     <chr>     <chr>  <dbl>
-    ## 1 Bambu-v3.12.1      BT474     E0        F1     0.605
-    ## 2 ESPRESSO-v1.6.0    BT474     E0        F1     0.796
-    ## 3 IsoQuant-v3.13.0   BT474     E0        F1     0.630
-    ## 4 IsoSeq-v4.0.0      BT474     E0        F1     0.124
-    ## 5 LRAA-v0.17.5       BT474     E0        F1     0.775
-    ## 6 Mandalorion-v4.5.0 BT474     E0        F1     0.625
+    ## 1 Bambu-v3.12.1      BT474     E0        F1     0.405
+    ## 2 ESPRESSO-v1.6.0    BT474     E0        F1     0.572
+    ## 3 IsoQuant-v3.13.0   BT474     E0        F1     0.428
+    ## 4 IsoSeq-v4.0.0      BT474     E0        F1     0.118
+    ## 5 LRAA-v0.51.0       BT474     E0        F1     0.564
+    ## 6 Mandalorion-v4.5.0 BT474     E0        F1     0.423
 
 ``` r
 prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Tool) %>%
-  summarize(mean_F1 = mean(Val)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Tool)
+  summarize(mean_F1 = mean(Val)) %>% arrange(desc(mean_F1)) %>% pull(Tool)
 
 
 df$Tool = factor(df$Tool, levels=prog_ranking)
@@ -92,8 +92,12 @@ get_latest_tools = function(data_df) {
   latest_versioned_tools = tool_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool_Base) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_tools = tool_versions %>%
@@ -109,7 +113,7 @@ latest_tools
 ```
 
     ## [1] "Bambu-v3.12.1"      "ESPRESSO-v1.6.0"    "IsoQuant-v3.13.0"  
-    ## [4] "IsoSeq-v4.0.0"      "LRAA-v0.17.5"       "Mandalorion-v4.5.0"
+    ## [4] "IsoSeq-v4.0.0"      "LRAA-v0.51.0"       "Mandalorion-v4.5.0"
     ## [7] "StringTie-v3.0.3"
 
 ``` r
@@ -166,12 +170,12 @@ mean_df %>% head()
     ## # Groups:   Tool, cell_line [2]
     ##   Tool            cell_line Metric    mean_val
     ##   <fct>           <chr>     <fct>        <dbl>
-    ## 1 ESPRESSO-v1.6.0 BT474     F1           0.796
-    ## 2 ESPRESSO-v1.6.0 BT474     Recall       0.711
-    ## 3 ESPRESSO-v1.6.0 BT474     Precision    0.902
-    ## 4 ESPRESSO-v1.6.0 HG002     F1           0.769
-    ## 5 ESPRESSO-v1.6.0 HG002     Recall       0.656
-    ## 6 ESPRESSO-v1.6.0 HG002     Precision    0.929
+    ## 1 ESPRESSO-v1.6.0 BT474     F1           0.572
+    ## 2 ESPRESSO-v1.6.0 BT474     Recall       0.416
+    ## 3 ESPRESSO-v1.6.0 BT474     Precision    0.920
+    ## 4 ESPRESSO-v1.6.0 HG002     F1           0.537
+    ## 5 ESPRESSO-v1.6.0 HG002     Recall       0.376
+    ## 6 ESPRESSO-v1.6.0 HG002     Precision    0.934
 
 ``` r
  df %>% select(cell_line) %>% unique()
@@ -188,7 +192,7 @@ mean_df %>% head()
 ``` r
 BT474_df = mean_df %>% filter(cell_line == "BT474")
 
-BT474_rankings = BT474_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
+BT474_rankings = BT474_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
 
 BT474_df$Tool = factor(BT474_df$Tool, levels=BT474_rankings)
 
@@ -206,7 +210,7 @@ BT474_df_ranked_plot
 ``` r
 K562_df = mean_df %>% filter(cell_line == "K562")
 
-K562_rankings = K562_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
+K562_rankings = K562_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
 
 K562_df$Tool = factor(K562_df$Tool, levels=K562_rankings)
 
@@ -225,7 +229,7 @@ K562_df_ranked_plot
 ``` r
 HG002_df = mean_df %>% filter(cell_line == "HG002")
 
-HG002_rankings = HG002_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
+HG002_rankings = HG002_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
 
 HG002_df$Tool = factor(HG002_df$Tool, levels=HG002_rankings)
 
@@ -244,7 +248,7 @@ HG002_df_ranked_plot
 ``` r
 UHRR_df = mean_df %>% filter(cell_line == "UHRR")
 
-UHRR_rankings = UHRR_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(mean_val)) %>% pull(Tool)
+UHRR_rankings = UHRR_df %>% filter(Metric == "F1") %>% arrange(desc(mean_val)) %>% pull(Tool)
 
 UHRR_df$Tool = factor(UHRR_df$Tool, levels=UHRR_rankings)
 
@@ -397,7 +401,7 @@ latest_BT474_df = latest_mean_df %>% filter(cell_line == "BT474")
 
 latest_BT474_rankings = latest_BT474_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
+  arrange(desc(mean_val)) %>%
   pull(Tool)
 
 latest_BT474_df$Tool = factor(latest_BT474_df$Tool, levels=latest_BT474_rankings)
@@ -406,7 +410,7 @@ latest_K562_df = latest_mean_df %>% filter(cell_line == "K562")
 
 latest_K562_rankings = latest_K562_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
+  arrange(desc(mean_val)) %>%
   pull(Tool)
 
 latest_K562_df$Tool = factor(latest_K562_df$Tool, levels=latest_K562_rankings)
@@ -415,7 +419,7 @@ latest_HG002_df = latest_mean_df %>% filter(cell_line == "HG002")
 
 latest_HG002_rankings = latest_HG002_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
+  arrange(desc(mean_val)) %>%
   pull(Tool)
 
 latest_HG002_df$Tool = factor(latest_HG002_df$Tool, levels=latest_HG002_rankings)
@@ -424,7 +428,7 @@ latest_UHRR_df = latest_mean_df %>% filter(cell_line == "UHRR")
 
 latest_UHRR_rankings = latest_UHRR_df %>%
   filter(Metric == "F1") %>%
-  arrange(dplyr::desc(mean_val)) %>%
+  arrange(desc(mean_val)) %>%
   pull(Tool)
 
 latest_UHRR_df$Tool = factor(latest_UHRR_df$Tool, levels=latest_UHRR_rankings)

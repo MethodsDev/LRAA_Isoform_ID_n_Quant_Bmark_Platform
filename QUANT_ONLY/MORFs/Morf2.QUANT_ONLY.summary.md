@@ -15,8 +15,8 @@ morf2_pearson_cor_df %>% head()
 ```
 
     ##                   name cor_value                        data_name
-    ## 1         LRAA-v0.17.5 0.9609754 ont_merged_annot_compat_1isoform
-    ## 2         FLAIR-v3.0.0 0.9457191 ont_merged_annot_compat_1isoform
+    ## 1         FLAIR-v3.0.0 0.9457191 ont_merged_annot_compat_1isoform
+    ## 2         LRAA-v0.51.0 0.9456086 ont_merged_annot_compat_1isoform
     ## 3     Isosceles-v0.2.0 0.7924134 ont_merged_annot_compat_1isoform
     ## 4          FLAMES-v0.1 0.7454203 ont_merged_annot_compat_1isoform
     ## 5        Bambu-v3.12.1 0.7318048 ont_merged_annot_compat_1isoform
@@ -24,7 +24,7 @@ morf2_pearson_cor_df %>% head()
 
 ``` r
 # rank according to mean cor val
-pearson_cor_df_ranking = morf2_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+pearson_cor_df_ranking = morf2_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 morf2_pearson_cor_df$name = factor(morf2_pearson_cor_df$name, levels=pearson_cor_df_ranking)
@@ -51,7 +51,7 @@ morf2_spearman_cor_df %>% head()
 ```
 
     ##                   name cor_value                        data_name
-    ## 1         LRAA-v0.17.5 0.9691281 ont_merged_annot_compat_1isoform
+    ## 1         LRAA-v0.51.0 0.9642353 ont_merged_annot_compat_1isoform
     ## 2         FLAIR-v3.0.0 0.9547624 ont_merged_annot_compat_1isoform
     ## 3        Bambu-v3.12.1 0.8587150 ont_merged_annot_compat_1isoform
     ## 4          FLAMES-v0.1 0.8244441 ont_merged_annot_compat_1isoform
@@ -60,7 +60,7 @@ morf2_spearman_cor_df %>% head()
 
 ``` r
 # rank according to mean cor val
-spearman_cor_df_ranking = morf2_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+spearman_cor_df_ranking = morf2_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 morf2_spearman_cor_df$name = factor(morf2_spearman_cor_df$name, levels=pearson_cor_df_ranking)
@@ -88,7 +88,7 @@ morf2_median_rel_diff %>% head()
 ```
 
     ##                   name   rel_diff                        data_name
-    ## 1         LRAA-v0.17.5 0.01561300 ont_merged_annot_compat_1isoform
+    ## 1         LRAA-v0.51.0 0.01420329 ont_merged_annot_compat_1isoform
     ## 2 Oarfish_reads-v0.9.4 0.02367004 ont_merged_annot_compat_1isoform
     ## 3 Oarfish_align-v0.9.4 0.02389556 ont_merged_annot_compat_1isoform
     ## 4        Bambu-v3.12.1 0.03052011 ont_merged_annot_compat_1isoform
@@ -167,7 +167,7 @@ morf2_mean_rel_diff %>% head()
 ```
 
     ##                   name  rel_diff                        data_name
-    ## 1         LRAA-v0.17.5 0.1125271 ont_merged_annot_compat_1isoform
+    ## 1         LRAA-v0.51.0 0.1120834 ont_merged_annot_compat_1isoform
     ## 2        Bambu-v3.12.1 0.2555935 ont_merged_annot_compat_1isoform
     ## 3         FLAIR-v3.0.0 0.2565504 ont_merged_annot_compat_1isoform
     ## 4 Oarfish_align-v0.9.4 0.3208770 ont_merged_annot_compat_1isoform
@@ -204,8 +204,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -222,7 +226,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"        "ESPRESSO-v1.6.0"      "FLAIR-v3.0.0"        
     ##  [4] "FLAMES-v0.1"          "IsoQuant-v3.13.0"     "IsoSeq-v4.0.0"       
-    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.17.5"         "Mandalorion-v4.5.0"  
+    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.51.0"         "Mandalorion-v4.5.0"  
     ## [10] "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4" "StringTie-v3.0.3"    
     ## [13] "TALON-v6.0"
 
@@ -386,15 +390,15 @@ morf2_oarfish_metrics_df %>% head()
 ```
 
     ##                   name       color  spearman pearson_log1p ccc_log1p   kendall
-    ## 1         LRAA-v0.17.5        teal 0.9691281     0.9609754 0.9598633 0.9266762
-    ## 2         FLAIR-v3.0.0        pink 0.9547624     0.9457191 0.9421868 0.8513079
+    ## 1         FLAIR-v3.0.0        pink 0.9547624     0.9457191 0.9421868 0.8513079
+    ## 2         LRAA-v0.51.0        teal 0.9642353     0.9456086 0.9440620 0.9251031
     ## 3     Isosceles-v0.2.0         red 0.8232688     0.7924134 0.7782030 0.7236100
     ## 4          FLAMES-v0.1   gainsboro 0.8244441     0.7454203 0.5079816 0.7265222
     ## 5        Bambu-v3.12.1 forestgreen 0.8587150     0.7318048 0.7045403 0.8056995
     ## 6 Oarfish_align-v0.9.4       khaki 0.8231573     0.6931725 0.6537424 0.7568922
     ##       rmse nrmse_mean_truth       mard pr_auc average_precision n_scored
-    ## 1 172.2762        0.4661795 0.05626356     NA                NA     2706
-    ## 2 206.4185        0.5585686 0.12827522     NA                NA     2706
+    ## 1 206.4185        0.5585686 0.12827522     NA                NA     2706
+    ## 2 183.4041        0.4962915 0.05604172     NA                NA     2706
     ## 3 402.7855        1.0899376 0.20384150     NA                NA     2706
     ## 4 382.0814        1.0339123 0.44212717     NA                NA     2706
     ## 5 310.2520        0.8395420 0.12779673     NA                NA     2706
@@ -461,7 +465,7 @@ if (nrow(morf2_oarfish_metrics_long) > 0) {
     mutate(
       metric_rank = if_else(
         direction == "higher is better",
-        min_rank(dplyr::desc(metric_value)),
+        min_rank(desc(metric_value)),
         min_rank(metric_value)
       )
     ) %>%

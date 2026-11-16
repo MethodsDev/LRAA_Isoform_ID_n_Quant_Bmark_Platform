@@ -16,7 +16,7 @@ arabidopsis_pearson_cor_df %>% head()
 
     ##                   name cor_value data_name
     ## 1         FLAIR-v3.0.0 0.9995280      e000
-    ## 2         LRAA-v0.17.5 0.9973733      e000
+    ## 2         LRAA-v0.51.0 0.9979623      e000
     ## 3 Oarfish_align-v0.9.4 0.9929663      e000
     ## 4 Oarfish_reads-v0.9.4 0.9906971      e000
     ## 5        Bambu-v3.12.1 0.9889260      e000
@@ -24,7 +24,7 @@ arabidopsis_pearson_cor_df %>% head()
 
 ``` r
 # rank according to mean cor val
-pearson_cor_df_ranking = arabidopsis_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+pearson_cor_df_ranking = arabidopsis_pearson_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 arabidopsis_pearson_cor_df$name = factor(arabidopsis_pearson_cor_df$name, levels=pearson_cor_df_ranking)
@@ -52,7 +52,7 @@ arabidopsis_spearman_cor_df %>% head()
 
     ##                   name cor_value data_name
     ## 1         FLAIR-v3.0.0 0.9991692      e000
-    ## 2         LRAA-v0.17.5 0.9965589      e000
+    ## 2         LRAA-v0.51.0 0.9971102      e000
     ## 3 Oarfish_align-v0.9.4 0.9892652      e000
     ## 4 Oarfish_reads-v0.9.4 0.9870814      e000
     ## 5        Bambu-v3.12.1 0.9870600      e000
@@ -60,7 +60,7 @@ arabidopsis_spearman_cor_df %>% head()
 
 ``` r
 # rank according to mean cor val
-spearman_cor_df_ranking = arabidopsis_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(dplyr::desc(mcor)) %>% pull(name)
+spearman_cor_df_ranking = arabidopsis_spearman_cor_df %>% group_by(name) %>% summarize(mcor = mean(cor_value)) %>% arrange(desc(mcor)) %>% pull(name)
 
 
 arabidopsis_spearman_cor_df$name = factor(arabidopsis_spearman_cor_df$name, levels=pearson_cor_df_ranking)
@@ -90,8 +90,8 @@ arabidopsis_median_rel_diff %>% head()
     ##                   name     rel_diff data_name
     ## 1 Oarfish_align-v0.9.4 4.835073e-05      e000
     ## 2         FLAIR-v3.0.0 4.504306e-04      e000
-    ## 3         LRAA-v0.17.5 2.519865e-03      e000
-    ## 4        Bambu-v3.12.1 5.749195e-03      e000
+    ## 3        Bambu-v3.12.1 5.749195e-03      e000
+    ## 4         LRAA-v0.51.0 5.979247e-03      e000
     ## 5 Oarfish_reads-v0.9.4 8.986024e-03      e000
     ## 6     Isosceles-v0.2.0 1.430838e-02      e000
 
@@ -126,7 +126,7 @@ arabidopsis_mean_rel_diff %>% head()
 
     ##                   name    rel_diff data_name
     ## 1         FLAIR-v3.0.0 0.006611344      e000
-    ## 2         LRAA-v0.17.5 0.036222431      e000
+    ## 2         LRAA-v0.51.0 0.039689264      e000
     ## 3        Bambu-v3.12.1 0.049056687      e000
     ## 4 Oarfish_align-v0.9.4 0.051844229      e000
     ## 5 Oarfish_reads-v0.9.4 0.063517361      e000
@@ -171,8 +171,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -189,7 +193,7 @@ latest_programs
 
     ##  [1] "Bambu-v3.12.1"        "ESPRESSO-v1.6.0"      "FLAIR-v3.0.0"        
     ##  [4] "FLAMES-v0.1"          "IsoQuant-v3.13.0"     "IsoSeq-v4.0.0"       
-    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.17.5"         "Mandalorion-v4.5.0"  
+    ##  [7] "Isosceles-v0.2.0"     "LRAA-v0.51.0"         "Mandalorion-v4.5.0"  
     ## [10] "Oarfish_align-v0.9.4" "Oarfish_reads-v0.9.4" "StringTie-v3.0.3"    
     ## [13] "TALON-v6.0"
 
@@ -516,14 +520,14 @@ arabidopsis_oarfish_metrics_df %>% head()
 
     ##                   name       color  spearman pearson_log1p ccc_log1p   kendall
     ## 1         FLAIR-v3.0.0        pink 0.9991692     0.9995280 0.9995273 0.9979569
-    ## 2         LRAA-v0.17.5        teal 0.9965589     0.9973733 0.9973714 0.9899364
+    ## 2         LRAA-v0.51.0        teal 0.9971102     0.9979623 0.9979558 0.9902227
     ## 3 Oarfish_align-v0.9.4       khaki 0.9892652     0.9929663 0.9929506 0.9747859
     ## 4 Oarfish_reads-v0.9.4   peachpuff 0.9870814     0.9906971 0.9906805 0.9724081
     ## 5        Bambu-v3.12.1 forestgreen 0.9870600     0.9889260 0.9889156 0.9768474
     ## 6     StringTie-v3.0.3  aquamarine 0.9830154     0.9867368 0.9867256 0.9628975
     ##        rmse nrmse_mean_truth        mard    pr_auc average_precision n_scored
     ## 1  2.647368       0.09995666 0.002849092 0.9996189         0.9995991    37757
-    ## 2 12.205508       0.46084337 0.015710425 0.9992521         0.9991573    37757
+    ## 2  9.993786       0.37733537 0.017216166 0.9992753         0.9991968    37757
     ## 3  5.976239       0.22564487 0.022313595 0.9991001         0.9984278    37757
     ## 4 25.615135       0.96715065 0.027335995 0.9990049         0.9982316    37757
     ## 5 34.247963       1.29310035 0.021199579 0.9977986         0.9974768    37757
@@ -590,7 +594,7 @@ if (nrow(arabidopsis_oarfish_metrics_long) > 0) {
     mutate(
       metric_rank = if_else(
         direction == "higher is better",
-        min_rank(dplyr::desc(metric_value)),
+        min_rank(desc(metric_value)),
         min_rank(metric_value)
       )
     ) %>%

@@ -14,8 +14,12 @@ get_latest_programs = function(data_df) {
   latest_versioned_programs = program_versions %>%
     filter(! is.na(Version)) %>%
     group_by(Tool) %>%
-    arrange(dplyr::desc(numeric_version(Version)), .by_group = TRUE) %>%
-    dplyr::slice(1) %>%
+    # numeric_version() rejects letter suffixes (e.g. 0.18.2b), so rank on the
+    # leading numeric run and break ties on the full string:
+    #   0.18.3 > 0.18.2b > 0.18.2
+    arrange(desc(numeric_version(str_extract(Version, "^[0-9]+(\\.[0-9]+)*"))),
+            desc(Version), .by_group = TRUE) %>%
+    slice(1) %>%
     ungroup()
 
   unversioned_programs = program_versions %>%
@@ -50,13 +54,13 @@ df$data_name = str_replace(df$data_name, "arabidopsis_isoseqsim_", "")
 df %>% head()
 ```
 
-    ##         Program   Metric       Value data_name
-    ## 1  LRAA-v0.17.5 knownTPR 0.928058883      e000
-    ## 2  LRAA-v0.17.5 novelFDR 0.006265458      e000
-    ## 3  LRAA-v0.17.5       F1 0.959774508      e000
-    ## 4 Bambu-v3.12.1 knownTPR 0.810600228      e000
-    ## 5 Bambu-v3.12.1 novelFDR 0.043880998      e000
-    ## 6 Bambu-v3.12.1       F1 0.877366667      e000
+    ##         Program   Metric      Value data_name
+    ## 1  LRAA-v0.51.0 knownTPR 0.93945367      e000
+    ## 2  LRAA-v0.51.0 novelFDR 0.00648124      e000
+    ## 3  LRAA-v0.51.0       F1 0.96573011      e000
+    ## 4 Bambu-v3.12.1 knownTPR 0.81060023      e000
+    ## 5 Bambu-v3.12.1 novelFDR 0.04388100      e000
+    ## 6 Bambu-v3.12.1       F1 0.87736667      e000
 
 ``` r
 df = df %>% spread(key=Metric, value=Value) 
@@ -69,14 +73,14 @@ df = df %>% gather(key=Metric, value=Value, F1, Recall, Precision)
 ``` r
 # define ranking
 
-prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+prog_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=prog_ranking)
 ```
 
 ``` r
 program_ranking = df %>% filter(Metric == "F1") %>% group_by(Program) %>% 
-  summarize(mean_F1 = mean(Value)) %>% arrange(dplyr::desc(mean_F1)) %>% pull(Program)
+  summarize(mean_F1 = mean(Value)) %>% arrange(desc(mean_F1)) %>% pull(Program)
 
 df$Program = factor(df$Program, levels=program_ranking)
 ```
@@ -145,7 +149,7 @@ get_ranked_df = function(data_name_val, data_df = df) {
 
   ranked_df = data_df %>%  filter(data_name == data_name_val) 
 
-  ranked_progs = ranked_df %>% filter(Metric == "F1") %>% arrange(dplyr::desc(Value)) %>% pull(Program)
+  ranked_progs = ranked_df %>% filter(Metric == "F1") %>% arrange(desc(Value)) %>% pull(Program)
 
   ranked_df$Program = factor(ranked_df$Program, levels=ranked_progs)
 
@@ -334,7 +338,7 @@ latest_programs
 ```
 
     ## [1] "Bambu-v3.12.1"      "ESPRESSO-v1.6.0"    "IsoQuant-v3.13.0"  
-    ## [4] "IsoSeq-v4.0.0"      "LRAA-v0.17.5"       "Mandalorion-v4.5.0"
+    ## [4] "IsoSeq-v4.0.0"      "LRAA-v0.51.0"       "Mandalorion-v4.5.0"
     ## [7] "StringTie-v3.0.3"
 
 ``` r
@@ -345,7 +349,7 @@ latest_program_ranking = latest_program_df %>%
   filter(Metric == "F1") %>%
   group_by(Program) %>%
   summarize(mean_F1 = mean(Value), .groups = "drop") %>%
-  arrange(dplyr::desc(mean_F1)) %>%
+  arrange(desc(mean_F1)) %>%
   pull(Program)
 
 latest_program_df$Program = factor(latest_program_df$Program,
