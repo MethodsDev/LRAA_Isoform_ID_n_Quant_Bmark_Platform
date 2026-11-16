@@ -68,3 +68,23 @@ script.log
 supp_analyses/**/*.html
 supp_analyses/**/Rplots.pdf
 supp_analyses/proteoforms/*_proteoform_analysis_results/
+
+# >>> Zenodo bundle data (unpacked by fetch_data.sh / install scripts; never commit)
+/supp_analyses/ism_internal_tss/out/
+/supp_analyses/proteoforms/orfs/
+/supp_analyses/tss_5prime/completeness/ALS.capsig.tsv.gz
+/supp_analyses/tss_5prime/completeness/ALS.event_pairs.tsv
+/supp_analyses/tss_5prime/completeness/ALS.event_sites.tsv.gz
+/supp_analyses/tss_5prime/completeness/ALS.extent.tsv.gz
+/supp_analyses/tss_5prime/completeness/ALS.genes.tsv
+/supp_analyses/tss_5prime/completeness/PBMC.capsig.tsv.gz
+/supp_analyses/tss_5prime/completeness/PBMC.event_pairs.tsv
+/supp_analyses/tss_5prime/completeness/PBMC.event_sites.tsv.gz
+/supp_analyses/tss_5prime/completeness/PBMC.extent.tsv.gz
+/supp_analyses/tss_5prime/completeness/PBMC.genes.tsv
+/supp_analyses/tss_5prime/completeness/cap_calibration/out/
+/supp_analyses/tss_5prime/truncation_check/ALS.lengths.tsv.gz
+/supp_analyses/tss_5prime/truncation_check/ALS.reads.tsv.gz
+/supp_analyses/tss_5prime/truncation_check/PBMC.lengths.tsv.gz
+/supp_analyses/tss_5prime/truncation_check/PBMC.reads.tsv.gz
+# <<< Zenodo bundle data
