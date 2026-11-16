@@ -21,9 +21,9 @@ from collections import defaultdict
 
 CELL_TYPE = {
     "FTD": {"0": "Oligodendrocyte", "3": "Oligodendrocyte", "1": "Excitatory neuron", "8": "Excitatory neuron",
-            "4": "Inhibitory neuron", "6": "Inhibitory neuron", "2": "Astrocyte", "7": "Astrocyte", "12": "Astrocyte",
+            "4": "Inhibitory neuron", "6": "Inhibitory neuron", "2": "Astrocyte", "7": "Astrocyte",
             "5": "Microglia", "9": "OPC", "10": "Vascular / meningeal", "11": "Vascular / meningeal",
-            "13": "Vascular / meningeal"},
+            "12": "Vascular / meningeal", "13": "Vascular / meningeal"},
     "PBMC": {"1": "Monocyte / DC", "11": "Monocyte / DC", "13": "Monocyte / DC", "6": "B", "9": "B",
              "3": "CD4 T", "7": "CD4 T", "0": "CD4 T", "5": "CD4 T", "12": "CD4 T",
              "2": "CD8 T / NK", "4": "CD8 T / NK", "8": "CD8 T / NK", "10": "CD8 T / NK"},

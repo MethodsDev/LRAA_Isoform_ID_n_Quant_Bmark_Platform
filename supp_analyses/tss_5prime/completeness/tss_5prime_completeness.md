@@ -243,11 +243,11 @@ Flagged events by the flag-1 factor
 | dataset | fav_class            | events | flagged | exempt |
 |:--------|:---------------------|-------:|--------:|-------:|
 | ALS     | Excitatory neuron    |     44 |       5 |     27 |
-| ALS     | Astrocyte            |     29 |       0 |     24 |
+| ALS     | Astrocyte            |     23 |       0 |     19 |
 | ALS     | Oligodendrocyte      |     20 |       0 |     18 |
 | ALS     | Inhibitory neuron    |     20 |      12 |      8 |
+| ALS     | Vascular / meningeal |     14 |       1 |      8 |
 | ALS     | OPC                  |     12 |       0 |     12 |
-| ALS     | Vascular / meningeal |      8 |       1 |      3 |
 | ALS     | Microglia            |      7 |       0 |      7 |
 | PBMC    | Monocyte / DC        |   1892 |      13 |    662 |
 | PBMC    | CD4 T                |   1349 |       6 |    870 |

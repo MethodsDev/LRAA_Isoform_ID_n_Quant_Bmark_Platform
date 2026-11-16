@@ -461,7 +461,7 @@ The FTD event pairs (`ext/`, the v0.45.0 high-confidence TSS switches
 where a neuron cluster favours the downstream site, before any cap
 rule): the downstream sites are 5’ truncation products by every other
 measure (no CAGE support, neuron nuclei’s short reads; see
-`../../LRAA_paper-FTD_study/__Site_Usage_Analysis`). Their capped
+`../../../../LRAA_paper-FTD_study/__Site_Usage_Analysis`). Their capped
 fractions, from the same read rules:
 
 ![](cap_calibration_files/figure-gfm/event_sites-1.png)<!-- -->
@@ -588,5 +588,5 @@ recorded in LRAA `docs/TSS_cap_calibration.md`.
   past the 10% per-site threshold. A per-library threshold at the valley
   would fix that; it is reported here (`valley`) but not used.
 
-Generated 2026-11-15 with LRAA’s pre-pass module from the branch that
+Generated 2026-11-16 with LRAA’s pre-pass module from the branch that
 becomes v0.47.0.

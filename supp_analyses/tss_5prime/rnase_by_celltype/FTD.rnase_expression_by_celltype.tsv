@@ -1,155 +1,155 @@
 dataset	gene	class	cell_type	clusters	mean_TPM
-FTD	RNASE1	RNase A family (secreted)	Astrocyte	3	11.47
+FTD	RNASE1	RNase A family (secreted)	Astrocyte	2	6.79
 FTD	RNASE1	RNase A family (secreted)	Excitatory neuron	2	2.12
 FTD	RNASE1	RNase A family (secreted)	Inhibitory neuron	2	10.97
 FTD	RNASE1	RNase A family (secreted)	Microglia	1	115.89
 FTD	RNASE1	RNase A family (secreted)	OPC	1	5.34
 FTD	RNASE1	RNase A family (secreted)	Oligodendrocyte	2	124.07
-FTD	RNASE1	RNase A family (secreted)	Vascular / meningeal	3	59.13
-FTD	RNASE2	RNase A family (secreted)	Astrocyte	3	0.00
+FTD	RNASE1	RNase A family (secreted)	Vascular / meningeal	4	49.56
+FTD	RNASE2	RNase A family (secreted)	Astrocyte	2	0.00
 FTD	RNASE2	RNase A family (secreted)	Excitatory neuron	2	0.00
 FTD	RNASE2	RNase A family (secreted)	Inhibitory neuron	2	0.00
 FTD	RNASE2	RNase A family (secreted)	Microglia	1	1.81
 FTD	RNASE2	RNase A family (secreted)	OPC	1	1.33
 FTD	RNASE2	RNase A family (secreted)	Oligodendrocyte	2	0.00
-FTD	RNASE2	RNase A family (secreted)	Vascular / meningeal	3	0.00
-FTD	RNASE4	RNase A family (secreted)	Astrocyte	3	14.99
+FTD	RNASE2	RNase A family (secreted)	Vascular / meningeal	4	0.00
+FTD	RNASE4	RNase A family (secreted)	Astrocyte	2	14.15
 FTD	RNASE4	RNase A family (secreted)	Excitatory neuron	2	0.44
 FTD	RNASE4	RNase A family (secreted)	Inhibitory neuron	2	0.37
 FTD	RNASE4	RNase A family (secreted)	Microglia	1	7.24
 FTD	RNASE4	RNase A family (secreted)	OPC	1	1.33
 FTD	RNASE4	RNase A family (secreted)	Oligodendrocyte	2	4.92
-FTD	RNASE4	RNase A family (secreted)	Vascular / meningeal	3	40.38
-FTD	ANG	RNase A family (secreted)	Astrocyte	3	9.80
+FTD	RNASE4	RNase A family (secreted)	Vascular / meningeal	4	34.45
+FTD	ANG	RNase A family (secreted)	Astrocyte	2	4.28
 FTD	ANG	RNase A family (secreted)	Excitatory neuron	2	0.15
 FTD	ANG	RNase A family (secreted)	Inhibitory neuron	2	0.00
 FTD	ANG	RNase A family (secreted)	Microglia	1	1.81
 FTD	ANG	RNase A family (secreted)	OPC	1	1.33
 FTD	ANG	RNase A family (secreted)	Oligodendrocyte	2	2.08
-FTD	ANG	RNase A family (secreted)	Vascular / meningeal	3	7.87
-FTD	RNASE6	RNase A family (secreted)	Astrocyte	3	5.56
+FTD	ANG	RNase A family (secreted)	Vascular / meningeal	4	11.11
+FTD	RNASE6	RNase A family (secreted)	Astrocyte	2	0.00
 FTD	RNASE6	RNase A family (secreted)	Excitatory neuron	2	0.61
 FTD	RNASE6	RNase A family (secreted)	Inhibitory neuron	2	0.63
 FTD	RNASE6	RNase A family (secreted)	Microglia	1	72.43
 FTD	RNASE6	RNase A family (secreted)	OPC	1	0.00
 FTD	RNASE6	RNase A family (secreted)	Oligodendrocyte	2	0.42
-FTD	RNASE6	RNase A family (secreted)	Vascular / meningeal	3	0.00
-FTD	RNASET2	lysosomal RNase	Astrocyte	3	42.79
+FTD	RNASE6	RNase A family (secreted)	Vascular / meningeal	4	4.17
+FTD	RNASET2	lysosomal RNase	Astrocyte	2	53.76
 FTD	RNASET2	lysosomal RNase	Excitatory neuron	2	29.41
 FTD	RNASET2	lysosomal RNase	Inhibitory neuron	2	40.79
 FTD	RNASET2	lysosomal RNase	Microglia	1	881.83
 FTD	RNASET2	lysosomal RNase	OPC	1	36.06
 FTD	RNASET2	lysosomal RNase	Oligodendrocyte	2	12.64
-FTD	RNASET2	lysosomal RNase	Vascular / meningeal	3	38.03
-FTD	PLD3	lysosomal 5'-3' exonuclease	Astrocyte	3	135.98
+FTD	RNASET2	lysosomal RNase	Vascular / meningeal	4	33.73
+FTD	PLD3	lysosomal 5'-3' exonuclease	Astrocyte	2	62.28
 FTD	PLD3	lysosomal 5'-3' exonuclease	Excitatory neuron	2	290.11
 FTD	PLD3	lysosomal 5'-3' exonuclease	Inhibitory neuron	2	205.43
 FTD	PLD3	lysosomal 5'-3' exonuclease	Microglia	1	130.37
 FTD	PLD3	lysosomal 5'-3' exonuclease	OPC	1	98.82
 FTD	PLD3	lysosomal 5'-3' exonuclease	Oligodendrocyte	2	96.05
-FTD	PLD3	lysosomal 5'-3' exonuclease	Vascular / meningeal	3	96.45
-FTD	PLD4	lysosomal 5'-3' exonuclease	Astrocyte	3	1.58
+FTD	PLD3	lysosomal 5'-3' exonuclease	Vascular / meningeal	4	143.18
+FTD	PLD4	lysosomal 5'-3' exonuclease	Astrocyte	2	2.37
 FTD	PLD4	lysosomal 5'-3' exonuclease	Excitatory neuron	2	0.38
 FTD	PLD4	lysosomal 5'-3' exonuclease	Inhibitory neuron	2	0.37
 FTD	PLD4	lysosomal 5'-3' exonuclease	Microglia	1	52.51
 FTD	PLD4	lysosomal 5'-3' exonuclease	OPC	1	1.33
 FTD	PLD4	lysosomal 5'-3' exonuclease	Oligodendrocyte	2	0.66
-FTD	PLD4	lysosomal 5'-3' exonuclease	Vascular / meningeal	3	4.37
-FTD	RNASEL	antiviral endoribonuclease	Astrocyte	3	16.62
+FTD	PLD4	lysosomal 5'-3' exonuclease	Vascular / meningeal	4	3.28
+FTD	RNASEL	antiviral endoribonuclease	Astrocyte	2	10.34
 FTD	RNASEL	antiviral endoribonuclease	Excitatory neuron	2	3.43
 FTD	RNASEL	antiviral endoribonuclease	Inhibitory neuron	2	2.47
 FTD	RNASEL	antiviral endoribonuclease	Microglia	1	18.11
 FTD	RNASEL	antiviral endoribonuclease	OPC	1	13.36
 FTD	RNASEL	antiviral endoribonuclease	Oligodendrocyte	2	4.28
-FTD	RNASEL	antiviral endoribonuclease	Vascular / meningeal	3	25.00
-FTD	ZC3H12D	Regnase endoribonuclease	Astrocyte	3	1.80
+FTD	RNASEL	antiviral endoribonuclease	Vascular / meningeal	4	26.04
+FTD	ZC3H12D	Regnase endoribonuclease	Astrocyte	2	2.69
 FTD	ZC3H12D	Regnase endoribonuclease	Excitatory neuron	2	2.29
 FTD	ZC3H12D	Regnase endoribonuclease	Inhibitory neuron	2	1.37
 FTD	ZC3H12D	Regnase endoribonuclease	Microglia	1	10.86
 FTD	ZC3H12D	Regnase endoribonuclease	OPC	1	0.00
 FTD	ZC3H12D	Regnase endoribonuclease	Oligodendrocyte	2	0.00
-FTD	ZC3H12D	Regnase endoribonuclease	Vascular / meningeal	3	1.43
-FTD	ERN1	IRE1 (RIDD) endoribonuclease	Astrocyte	3	34.37
+FTD	ZC3H12D	Regnase endoribonuclease	Vascular / meningeal	4	1.08
+FTD	ERN1	IRE1 (RIDD) endoribonuclease	Astrocyte	2	11.96
 FTD	ERN1	IRE1 (RIDD) endoribonuclease	Excitatory neuron	2	4.53
 FTD	ERN1	IRE1 (RIDD) endoribonuclease	Inhibitory neuron	2	11.60
 FTD	ERN1	IRE1 (RIDD) endoribonuclease	Microglia	1	32.59
 FTD	ERN1	IRE1 (RIDD) endoribonuclease	OPC	1	13.35
 FTD	ERN1	IRE1 (RIDD) endoribonuclease	Oligodendrocyte	2	8.96
-FTD	ERN1	IRE1 (RIDD) endoribonuclease	Vascular / meningeal	3	15.34
-FTD	XRN1	5'-3' decay	Astrocyte	3	148.53
+FTD	ERN1	IRE1 (RIDD) endoribonuclease	Vascular / meningeal	4	31.30
+FTD	XRN1	5'-3' decay	Astrocyte	2	114.45
 FTD	XRN1	5'-3' decay	Excitatory neuron	2	145.04
 FTD	XRN1	5'-3' decay	Inhibitory neuron	2	192.74
 FTD	XRN1	5'-3' decay	Microglia	1	188.32
 FTD	XRN1	5'-3' decay	OPC	1	223.01
 FTD	XRN1	5'-3' decay	Oligodendrocyte	2	144.56
-FTD	XRN1	5'-3' decay	Vascular / meningeal	3	166.22
-FTD	XRN2	5'-3' decay (nuclear)	Astrocyte	3	68.11
+FTD	XRN1	5'-3' decay	Vascular / meningeal	4	178.84
+FTD	XRN2	5'-3' decay (nuclear)	Astrocyte	2	64.66
 FTD	XRN2	5'-3' decay (nuclear)	Excitatory neuron	2	67.31
 FTD	XRN2	5'-3' decay (nuclear)	Inhibitory neuron	2	80.81
 FTD	XRN2	5'-3' decay (nuclear)	Microglia	1	155.72
 FTD	XRN2	5'-3' decay (nuclear)	OPC	1	97.49
 FTD	XRN2	5'-3' decay (nuclear)	Oligodendrocyte	2	108.33
-FTD	XRN2	5'-3' decay (nuclear)	Vascular / meningeal	3	139.00
-FTD	DCP2	decapping	Astrocyte	3	40.78
+FTD	XRN2	5'-3' decay (nuclear)	Vascular / meningeal	4	123.01
+FTD	DCP2	decapping	Astrocyte	2	44.50
 FTD	DCP2	decapping	Excitatory neuron	2	79.31
 FTD	DCP2	decapping	Inhibitory neuron	2	91.56
 FTD	DCP2	decapping	Microglia	1	204.61
 FTD	DCP2	decapping	OPC	1	40.06
 FTD	DCP2	decapping	Oligodendrocyte	2	44.25
-FTD	DCP2	decapping	Vascular / meningeal	3	69.03
-FTD	DCP1A	decapping	Astrocyte	3	42.48
+FTD	DCP2	decapping	Vascular / meningeal	4	60.11
+FTD	DCP1A	decapping	Astrocyte	2	42.89
 FTD	DCP1A	decapping	Excitatory neuron	2	47.08
 FTD	DCP1A	decapping	Inhibitory neuron	2	38.47
 FTD	DCP1A	decapping	Microglia	1	65.19
 FTD	DCP1A	decapping	OPC	1	49.41
 FTD	DCP1A	decapping	Oligodendrocyte	2	49.51
-FTD	DCP1A	decapping	Vascular / meningeal	3	55.48
-FTD	EXOSC10	exosome (nuclear)	Astrocyte	3	63.82
+FTD	DCP1A	decapping	Vascular / meningeal	4	52.03
+FTD	EXOSC10	exosome (nuclear)	Astrocyte	2	74.90
 FTD	EXOSC10	exosome (nuclear)	Excitatory neuron	2	51.35
 FTD	EXOSC10	exosome (nuclear)	Inhibitory neuron	2	58.40
 FTD	EXOSC10	exosome (nuclear)	Microglia	1	56.13
 FTD	EXOSC10	exosome (nuclear)	OPC	1	102.83
 FTD	EXOSC10	exosome (nuclear)	Oligodendrocyte	2	54.21
-FTD	EXOSC10	exosome (nuclear)	Vascular / meningeal	3	65.39
-FTD	DIS3	exosome	Astrocyte	3	42.87
+FTD	EXOSC10	exosome (nuclear)	Vascular / meningeal	4	59.46
+FTD	DIS3	exosome	Astrocyte	2	35.13
 FTD	DIS3	exosome	Excitatory neuron	2	49.48
 FTD	DIS3	exosome	Inhibitory neuron	2	69.85
 FTD	DIS3	exosome	Microglia	1	48.89
 FTD	DIS3	exosome	OPC	1	38.73
 FTD	DIS3	exosome	Oligodendrocyte	2	52.43
-FTD	DIS3	exosome	Vascular / meningeal	3	54.24
-FTD	DIS3L2	3'-5' decay	Astrocyte	3	49.26
+FTD	DIS3	exosome	Vascular / meningeal	4	55.26
+FTD	DIS3L2	3'-5' decay	Astrocyte	2	38.47
 FTD	DIS3L2	3'-5' decay	Excitatory neuron	2	30.40
 FTD	DIS3L2	3'-5' decay	Inhibitory neuron	2	35.51
 FTD	DIS3L2	3'-5' decay	Microglia	1	57.95
 FTD	DIS3L2	3'-5' decay	OPC	1	29.38
 FTD	DIS3L2	3'-5' decay	Oligodendrocyte	2	70.13
-FTD	DIS3L2	3'-5' decay	Vascular / meningeal	3	28.81
-FTD	CNOT7	deadenylation	Astrocyte	3	37.71
+FTD	DIS3L2	3'-5' decay	Vascular / meningeal	4	39.32
+FTD	CNOT7	deadenylation	Astrocyte	2	44.07
 FTD	CNOT7	deadenylation	Excitatory neuron	2	62.53
 FTD	CNOT7	deadenylation	Inhibitory neuron	2	57.22
 FTD	CNOT7	deadenylation	Microglia	1	52.51
 FTD	CNOT7	deadenylation	OPC	1	42.73
 FTD	CNOT7	deadenylation	Oligodendrocyte	2	47.33
-FTD	CNOT7	deadenylation	Vascular / meningeal	3	35.34
-FTD	PAN2	deadenylation	Astrocyte	3	64.33
+FTD	CNOT7	deadenylation	Vascular / meningeal	4	32.76
+FTD	PAN2	deadenylation	Astrocyte	2	69.41
 FTD	PAN2	deadenylation	Excitatory neuron	2	37.76
 FTD	PAN2	deadenylation	Inhibitory neuron	2	55.41
 FTD	PAN2	deadenylation	Microglia	1	95.97
 FTD	PAN2	deadenylation	OPC	1	56.09
 FTD	PAN2	deadenylation	Oligodendrocyte	2	60.40
-FTD	PAN2	deadenylation	Vascular / meningeal	3	70.94
-FTD	SMG6	NMD endonuclease	Astrocyte	3	60.73
+FTD	PAN2	deadenylation	Vascular / meningeal	4	66.75
+FTD	SMG6	NMD endonuclease	Astrocyte	2	39.01
 FTD	SMG6	NMD endonuclease	Excitatory neuron	2	42.87
 FTD	SMG6	NMD endonuclease	Inhibitory neuron	2	62.03
 FTD	SMG6	NMD endonuclease	Microglia	1	43.46
 FTD	SMG6	NMD endonuclease	OPC	1	26.71
 FTD	SMG6	NMD endonuclease	Oligodendrocyte	2	27.69
-FTD	SMG6	NMD endonuclease	Vascular / meningeal	3	57.45
-FTD	PNPT1	3'-5' exoribonuclease	Astrocyte	3	89.09
+FTD	SMG6	NMD endonuclease	Vascular / meningeal	4	69.13
+FTD	PNPT1	3'-5' exoribonuclease	Astrocyte	2	83.63
 FTD	PNPT1	3'-5' exoribonuclease	Excitatory neuron	2	70.92
 FTD	PNPT1	3'-5' exoribonuclease	Inhibitory neuron	2	107.84
 FTD	PNPT1	3'-5' exoribonuclease	Microglia	1	76.05
 FTD	PNPT1	3'-5' exoribonuclease	OPC	1	117.52
 FTD	PNPT1	3'-5' exoribonuclease	Oligodendrocyte	2	182.23
-FTD	PNPT1	3'-5' exoribonuclease	Vascular / meningeal	3	86.22
+FTD	PNPT1	3'-5' exoribonuclease	Vascular / meningeal	4	89.67
