@@ -17,7 +17,7 @@ PBMC_BAM      := ../../../PBMCs_kinnex/PBMCs_pbio.aligned.sorted.bam
 PBMC_CLUSTERS := ../../../LRAA_paper-PBMCs_study/pbmcs_refGuided/data/RefQuantOnly.cell_clusters.tsv
 
 .PHONY: all report
-all: ALS.reads.tsv.gz PBMC.reads.tsv.gz
+all: ALS.reads.tsv.gz PBMC.reads.tsv.gz control_genes.reads.tsv.gz
 report: all
 	Rscript -e 'rmarkdown::render("tss_truncation_check.Rmd")' > knit.log 2>&1
 
@@ -27,3 +27,10 @@ ALS.reads.tsv.gz: $(SCRIPT)
 PBMC.reads.tsv.gz: $(SCRIPT)
 	python3 $(SCRIPT) --bam $(PBMC_BAM) --gtf $(GTF) --genes $(GENES) --cell_clusters $(PBMC_CLUSTERS) \
 		--genome $(GENOME) --HiFi --rdna_mask_bed $(RDNA_MASK) --output_prefix PBMC > PBMC.log 2>&1
+
+# Supp Fig TSS 5' (c): polyA-anchored reads of the control genes reaching the TSS, with one dominant TSS, PolyA
+# site and isoform per gene from both datasets' reads pooled (control_gene_tss_reach.py)
+control_genes.reads.tsv.gz: control_gene_tss_reach.py
+	python3 control_gene_tss_reach.py --dataset FTD $(ALS_BAM) $(ALS_CLUSTERS) --dataset PBMC $(PBMC_BAM) $(PBMC_CLUSTERS) \
+		--gtf $(GTF) --genes $(GENES) --genome $(GENOME) --HiFi --rdna_mask_bed $(RDNA_MASK) \
+		--output_prefix control_genes > control_genes.log 2>&1

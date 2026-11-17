@@ -155,8 +155,9 @@ The supplementary analyses read the study submodules and the cross-dataset Zenod
 each report is knit from its own directory (`Rscript -e "rmarkdown::render('<report>.Rmd')"`) and each
 figure script runs there (`Rscript SuppFig_<name>.R`). The proteoform notebook runs with
 `make -C supp_analyses/proteoforms notebook REF_GTF=<GENCODE v47 GTF>`; its ORFs are in the bundle
-(`supp_analyses/proteoforms/orfs/`) and `run_orfs.sh` predicts them again. The Supplementary Tables are built
-by `python3 make_dexseq_supp_table.py` and `python3 make_ISM_supp_table.py` in `supp_tables/`.
+(`supp_analyses/proteoforms/orfs/`) and `run_orfs.sh` predicts them again. Supplementary Tables 1-2 are built
+by `python3 make_dexseq_supp_table.py` and `python3 make_ISM_supp_table.py` in `supp_tables/`; Supplementary
+Tables 3-4 (benchmark accuracy values, sequencing libraries) are provided as built.
 
 | Paper item | Panels | What | File(s) in this repo |
 |---|---|---|---|
@@ -171,7 +172,7 @@ by `python3 make_dexseq_supp_table.py` and `python3 make_ISM_supp_table.py` in `
 | Supplementary Figure 9 | a-c | image (rebuilt here) | `supp_analyses/site_atlas/SuppFig_site_atlas.pdf`<br>`supp_analyses/site_atlas/SuppFig_site_atlas.values.tsv` |
 | Supplementary Figure 9 | a-c | generator | `supp_analyses/site_atlas/SuppFig_site_atlas.R` |
 | Supplementary Figure 10 | a,c | report (rebuilt here) | `supp_analyses/tss_5prime/truncation_check/tss_truncation_check.md`<br>+ 5 knitr figure files |
-| Supplementary Figure 10 | a,c | generator | `supp_analyses/tss_5prime/truncation_check/Makefile`<br>`supp_analyses/tss_5prime/truncation_check/tss_truncation_check.Rmd` |
+| Supplementary Figure 10 | a,c | generator | `supp_analyses/tss_5prime/truncation_check/Makefile`<br>`supp_analyses/tss_5prime/truncation_check/control_gene_tss_reach.py`<br>`supp_analyses/tss_5prime/truncation_check/tss_truncation_check.Rmd` |
 | Supplementary Figure 10 | a-e | image (rebuilt here) | `supp_analyses/tss_5prime/SuppFig_TSS_5prime.pdf`<br>`supp_analyses/tss_5prime/SuppFig_TSS_5prime.values.tsv` |
 | Supplementary Figure 10 | a-e | generator | `supp_analyses/tss_5prime/SuppFig_TSS_5prime.R` |
 | Supplementary Figure 10 | b,d,e | report (rebuilt here) | `supp_analyses/tss_5prime/completeness/cap_calibration/cap_calibration.md`<br>`supp_analyses/tss_5prime/completeness/tss_5prime_completeness.md`<br>+ 14 knitr figure files |
@@ -186,6 +187,8 @@ by `python3 make_dexseq_supp_table.py` and `python3 make_ISM_supp_table.py` in `
 | Supplementary Table 2 | - | generator | `supp_analyses/ism_internal_tss/` (22 files) |
 | Supplementary Table 2 | - | generator | `supp_tables/make_ISM_supp_table.py` |
 | Supplementary Table 2 | - | table (rebuilt here) | `supp_tables/SuppTable2_ISM_internal_TSS.tsv`<br>`supp_tables/SuppTable2_ISM_internal_TSS.xlsx` |
+| Supplementary Table 3 | - | table | `supp_tables/SuppTable3_benchmark_metrics.xlsx` |
+| Supplementary Table 4 | - | table | `supp_tables/SuppTable4_libraries.xlsx` |
 
 Cross-dataset Zenodo bundle:
 
@@ -193,7 +196,7 @@ Cross-dataset Zenodo bundle:
 |---|---|---|---|
 | cross | Supplementary Figure 10 | tss5prime_completeness_data | `supp_analyses/tss_5prime/completeness/` (79 files) |
 | cross | Supplementary Figure 10 | tss_truncation_lengths | `supp_analyses/tss_5prime/truncation_check/ALS.lengths.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/PBMC.lengths.tsv.gz` |
-| cross | Supplementary Figure 10 | tss_truncation_reads | `supp_analyses/tss_5prime/truncation_check/ALS.reads.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/PBMC.reads.tsv.gz` |
+| cross | Supplementary Figure 10 | tss_truncation_reads | `supp_analyses/tss_5prime/truncation_check/ALS.reads.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/PBMC.reads.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/control_genes.anchoring.tsv`<br>`supp_analyses/tss_5prime/truncation_check/control_genes.reads.tsv.gz`<br>`supp_analyses/tss_5prime/truncation_check/control_genes.sites.tsv` |
 | cross | Supplementary Figure 11, Supplementary Table 2 | ism_data | `supp_analyses/ism_internal_tss/out/` (21 files) |
 | cross | Supplementary Figure 11 | ism_example_reads | `supp_analyses/ism_internal_tss/out/examples/reads.tsv.gz` |
 | cross | Supplementary Figure 7, Supplementary Figure 8 | sfig_proteoforms_orfs | `supp_analyses/proteoforms/orfs/FTD/LP00714.refGuided.scg.cdna.fasta.transdecoder.genome.gff3`<br>`supp_analyses/proteoforms/orfs/FTD/LP00714.refGuided.scg.cdna.fasta.transdecoder.pep`<br>`supp_analyses/proteoforms/orfs/FTD/ORFS_VERSION.txt`<br>`supp_analyses/proteoforms/orfs/PBMC/ORFS_VERSION.txt`<br>`supp_analyses/proteoforms/orfs/PBMC/PBMCs_pbio.LRAA.refGuided.scg.cdna.fasta.transdecoder.genome.gff3`<br>`supp_analyses/proteoforms/orfs/PBMC/PBMCs_pbio.LRAA.refGuided.scg.cdna.fasta.transdecoder.pep` |

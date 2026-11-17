@@ -87,4 +87,7 @@ supp_analyses/proteoforms/*_proteoform_analysis_results/
 /supp_analyses/tss_5prime/truncation_check/ALS.reads.tsv.gz
 /supp_analyses/tss_5prime/truncation_check/PBMC.lengths.tsv.gz
 /supp_analyses/tss_5prime/truncation_check/PBMC.reads.tsv.gz
+/supp_analyses/tss_5prime/truncation_check/control_genes.reads.tsv.gz
+/supp_analyses/tss_5prime/truncation_check/control_genes.sites.tsv
+/supp_analyses/tss_5prime/truncation_check/control_genes.anchoring.tsv
 # <<< Zenodo bundle data

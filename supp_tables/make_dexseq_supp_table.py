@@ -18,9 +18,10 @@ over-represented.
 
 Writes
   SuppTable1_differential_usage.xlsx: a README sheet (definitions, version, column key), a Summary
-    sheet (genes per level), and one sheet per dataset x level with its high-confidence events;
+    sheet (genes per level), a Clusters sheet (each cluster's cell type and cells), and one sheet per
+    dataset x level with its high-confidence events (cell types next to the cluster ids);
   differential_usage_all_events.zip: every event (one TSV per dataset x level, high-confidence
-    first) plus README.txt, kept in the repo (the paper points to it with the Supplementary Code).
+    first) plus README.txt and clusters.tsv, kept in the repo (the paper points to it with the Supplementary Code).
     All events in the workbook would be ~55 MB.
 The columns linking site events to the chi-square isoform test
 (isoform_*_DTU_*) are left out: the paper does not use that test.
@@ -48,6 +49,13 @@ LRAA_VERSION = "v0.51.0"   # the LRAA release of the study bundles
 # the LRAA gtf the site analysis reads (__Site_Usage_Analysis/Makefile GTF): a model's gene symbol
 SITE_GTF = {"PBMC": "pbmcs_refGuided/pbmcs_refGuided_sc_cluster_guided/data/PBMCs_pbio_CG_refguided.withGeneSymbols.gtf",
             "FTD": "als_refGuided/als_refGuided_sc_cluster_guided/data/LP00714.refguided.withGeneSymbols.gtf"}
+# cell clusters (fixed, RefQuantOnly): cells per cluster, the cluster-level cell type annotation (from CAS labels),
+# and the paper's short names
+# (CLUSTER_INFO in the dataset's __Paper_Figures/paper_fig_dataset.R, as in the main figures)
+CLUSTER_CELLS = {"PBMC": ("pbmcs_refQuantOnly/PBMCS.refQuantOnly.cell_clusters_and_cell_types.wUMAP.tsv", "cell_type_annot"),
+                 "FTD": ("als_refQuantOnly/LP00714.ALS.refQuantOnly.cell_clusters_and_cell_types.wUMAP.tsv",
+                         "cell_type_simplified")}
+CLUSTER_LABELS = "__Paper_Figures/paper_fig_dataset.R"
 LEVELS = [
     # level, analysis dir, what a feature is
     ("SplicePattern", "__Splice_Pattern_Usage_Analysis",
@@ -70,6 +78,8 @@ COLUMNS = {
     "gene_symbol": "gene symbol",
     "cluster_A": "first cluster of the pair",
     "cluster_B": "second cluster; the gained feature's usage is higher in B than in A",
+    "cell_type_A": "cluster A's cell type (short name as in the figures; Clusters sheet)",
+    "cell_type_B": "cluster B's cell type (short name as in the figures; Clusters sheet)",
     "gained_feature": "the feature whose usage rises most significantly from A to B",
     "lost_feature": "the feature whose usage falls most from A to B",
     "gained_site": "the site whose usage rises most significantly from A to B",
@@ -145,6 +155,9 @@ README = [
               "(>= 12 A's in the 20 bases past a PolyA site); polyA_site_unsupported (no PAS, no PolyASite 2.0 "
               "support, > 7 downstream A's: internal priming); downstream_TSS_no_FSM (gained TSS downstream of the "
               "lost one without full-length reads: 5' truncation)"),
+    ("Clusters sheet", "per dataset: each cluster's short name (as in the figures), lineage, cell type annotation "
+                       "(the Cell Annotation Service label most common among its cells; FTD clusters 12 and 13 "
+                       "relabelled from marker genes, see Methods) and number of cells"),
     ("Summary sheet", "per dataset x level: genes tested, significant genes (q < 0.05 in >= 4 of 5 seeds), genes with "
                       "events and events (significant genes x cluster pairs), high-confidence genes and events"),
     ("FTD TSS", CAVEATS[("FTD", "TSS")]),
@@ -175,6 +188,28 @@ def describe(col):
             if stem == key:
                 return f"{side} feature: " + text.format(c=cl or "")
     return ""
+
+
+def cluster_table(ds, root):
+    """Cluster id (Cluster_N) -> short name, lineage, cell type annotation, cells."""
+    cells_file, annot_col = CLUSTER_CELLS[ds]
+    cells = pd.read_csv(os.path.join(ROOT, root, cells_file), sep="\t")
+    labels = {}
+    with open(os.path.join(ROOT, root, CLUSTER_LABELS)) as fh:
+        block = fh.read().split("CLUSTER_INFO = tibble::tribble(", 1)[1].split("\n\n", 1)[0]
+    for m in re.finditer(r'^\s*(\d+),\s*"([^"]+)",\s*"([^"]+)"', block, re.M):
+        labels[int(m.group(1))] = (m.group(2), m.group(3))
+    rows = []
+    for cl, d in cells.groupby("seurat_clusters"):
+        if cl not in labels:
+            sys.exit(f"{ds}: cluster {cl} has no short name in {CLUSTER_LABELS}")
+        rows.append({"dataset": ds, "cluster": f"Cluster_{cl}", "cell_type": labels[cl][0], "lineage": labels[cl][1],
+                     "annotation": d[annot_col].value_counts().index[0], "cells": len(d)})
+    if len(rows) != len(labels):
+        sys.exit(f"{ds}: {CLUSTER_LABELS} names {len(labels)} clusters, the cell table has {len(rows)}")
+    # in the figures' order (CLUSTER_INFO)
+    order = list(labels)
+    return pd.DataFrame(sorted(rows, key=lambda r: order.index(int(r["cluster"].split("_")[1]))))
 
 
 def model_symbols(gtf):
@@ -212,14 +247,20 @@ def main():
     version = LRAA_VERSION
 
     symbols = {ds: model_symbols(os.path.join(ROOT, root, SITE_GTF[ds])) for ds, root, _ in DATASETS}
+    clusters = pd.concat([cluster_table(ds, root) for ds, root, _ in DATASETS], ignore_index=True)
     sheets, summary, columns = [], [], {}
     for ds, root, prefix in DATASETS:
+        cell_type = clusters[clusters.dataset == ds].set_index("cluster").cell_type
         for lvl, sub, _ in LEVELS:
             base = os.path.join(ROOT, root, sub, f"{prefix}.dexseq.{lvl}")
             hcc = "high_confidence"
             ev = pd.read_csv(base + ".events.tsv", sep="\t", low_memory=False)
             genes = pd.read_csv(base + ".genes.tsv", sep="\t")
             ev = ev.drop(columns=[c for c in DROP if c in ev.columns])
+            for side in "AB":
+                ct = ev[f"cluster_{side}"].map(cell_type)
+                assert ct.notna().all(), f"{ds} {lvl}: clusters without a cell type"
+                ev.insert(ev.columns.get_loc(f"cluster_{side}") + 1, f"cell_type_{side}", ct)
             if sub == "__Site_Usage_Analysis":
                 ev = annotate_sites(ev, root, prefix, lvl, symbols[ds])
             ev = ev.sort_values([hcc, "abs_delta"], ascending=[False, False])
@@ -244,6 +285,8 @@ def main():
         xw.sheets["README"].set_column(0, 0, 32)
         xw.sheets["README"].set_column(1, 1, 120)
         pd.DataFrame(summary).to_excel(xw, sheet_name="Summary", index=False)
+        clusters.to_excel(xw, sheet_name="Clusters", index=False)
+        xw.sheets["Clusters"].set_column(4, 4, 60)
         for name, ev, hcc in sheets:
             ev[ev[hcc].astype(str) == "True"].to_excel(xw, sheet_name=name, index=False)
             xw.sheets[name].freeze_panes(1, 0)
@@ -255,6 +298,7 @@ def main():
         text += "\n\ncolumn\tdescription\n"
         text += "\n".join(f"{c}\t{d}" for c, d in sorted(columns.items())) + "\n"
         zf.writestr("README.txt", text)
+        zf.writestr("clusters.tsv", clusters.to_csv(sep="\t", index=False))
         for name, ev, _ in sheets:
             zf.writestr(f"{name}.events.tsv", ev.to_csv(sep="\t", index=False))
 

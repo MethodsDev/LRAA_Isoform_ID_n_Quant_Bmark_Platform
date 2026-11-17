@@ -3,7 +3,7 @@
 #
 # (a) strict ISM TSSs with a capped read pile-up, by further evidence tier, per library;
 # (b) CAGE peaks within 10 nt of capped and uncapped read pile-ups, against random positions in the same exon;
-# (c) each tool's own strict ISM isoforms (bulk libraries): truncation-like share of judged starts, supported TSSs;
+# (c) each tool's own strict ISM isoforms (bulk libraries): fragment-like share of judged starts, supported TSSs;
 # (d-g) COMT (known internal promoter), the FTD example, CORO1B and RECQL4: L and S models with both CDSs (blue; GENCODE,
 # or pyTD's ORF for L and its in-frame part from S's ATG), a sample of the reads compatible with L or S (2026-11-07: the
 # read's intron chain is a run of the model's introns and its ends lie in the matching exons), and below, aligned to the
@@ -39,9 +39,10 @@ HEIGHT_IN = 8.6
 ds_f = function(x) factor(DS_LABEL[as.character(x)], DS_LABEL)
 
 # ---- (a) tiers
-tiers = c("all" = "All", "pile-up+cap" = "Pile-up + cap", "core: pile-up+cap+atlas" = "+ CAGE or refTSS",
-          "core, not canonical TSS" = "+ not canonical TSS", "core, protein altered" = "+ protein altered",
-          "core, N-truncated" = "+ N-truncated")
+# row labels say what each filter adds to the row above (user, 2026-11-16: the legend was hard to follow)
+tiers = c("all" = "All", "pile-up+cap" = "Capped read pile-up", "core: pile-up+cap+atlas" = "+ at a CAGE or refTSS peak",
+          "core, not canonical TSS" = "+ >50 nt from canonical TSS", "core, protein altered" = "+ protein altered",
+          "core, N-truncated" = "+ N-terminus truncated")
 td = read_tsv(file.path(IN, "tier_counts_dataset.tsv"), show_col_types = FALSE) %>%
     filter(class == "strict_ISM", tier %in% names(tiers)) %>%
     mutate(label = factor(tiers[tier], rev(tiers)), ds = ds_f(dataset))
@@ -53,7 +54,7 @@ pa = ggplot(td %>% filter(tier != "all"), aes(peaks, label)) +
     geom_text(aes(label = scales::comma(peaks)), hjust = -0.1, size = 1.9) +
     facet_wrap(~ds, nrow = 1) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.25)), breaks = c(0, 100)) +
-    labs(x = "strict ISM TSSs", y = NULL, tag = "a") + theme_paper()
+    labs(x = "Strict ISM TSSs passing the filters so far", y = NULL, tag = "a") + theme_paper()
 
 # ---- (b) CAGE, capped vs uncapped pile-ups
 ab = read_tsv(file.path(IN, "atlas_background.tsv"), show_col_types = FALSE) %>%
@@ -69,17 +70,20 @@ pb = ggplot(bars, aes(ds, 100 * value, fill = kind)) +
           panel.spacing.x = unit(6, "mm"))   # capped and uncapped facets kept visibly apart
 
 # ---- (c) each tool's OWN strict ISM isoforms (S and L from the tool, or L from GENCODE), their starts judged by reads and
-# atlases (tool_own_ism.py; user, 2026-11-10). x: truncation-like share of the starts the reads can judge; y: supported
-# internal TSSs; dot area: the tool's ISM isoforms. Four bulk libraries pooled.
-ti = read_tsv(file.path(IN, "tool_own_ism.pooled.tsv"), show_col_types = FALSE) %>% filter(tool %in% TOOLS)
-pc = ggplot(ti, aes(pct_truncation_of_judged, supported)) +
-    geom_point(aes(size = ism_isoforms, colour = tool == "LRAA"), alpha = 0.8) +
-    ggrepel::geom_text_repel(aes(label = tool), size = 2, min.segment.length = 0, seed = 1, box.padding = 0.4, point.padding = 0.5, max.overlaps = Inf) +
+# atlases (tool_own_ism.py; user, 2026-11-10). Four bulk libraries pooled. Redrawn 2026-11-16 (user): one column per tool,
+# y the supported share of the judged starts (judged = supported + fragment-like), dot area the number of judged starts,
+# the number of judged starts under each dot.
+ti = read_tsv(file.path(IN, "tool_own_ism.pooled.tsv"), show_col_types = FALSE) %>% filter(tool %in% TOOLS) %>%
+    mutate(pct_supported_of_judged = 100 * supported / judged, tool = fct_reorder(tool, -pct_supported_of_judged))
+pc = ggplot(ti, aes(tool, pct_supported_of_judged)) +
+    geom_point(aes(size = judged, colour = tool == "LRAA"), alpha = 0.8) +
+    geom_text(aes(y = -17, label = paste0("n=", scales::comma(judged))), size = 1.8) +
     scale_colour_manual(values = c(`TRUE` = ISOFORM_COLORS[2], `FALSE` = OTHER_ISOFORM_COLOR), guide = "none") +
-    scale_size(trans = "log10", range = c(0.8, 6), breaks = c(1e3, 1e4, 1e5), labels = c("1,000", "10,000", "100,000"), name = "ISM isoforms") +
-    scale_x_continuous(limits = c(0, 100)) + scale_y_log10(limits = c(5, 600)) +
-    labs(x = "Truncation-like ISM starts\n(% of judged; lower is better)", y = "Supported ISM TSSs\n(higher is better)", tag = "c") +
-    theme_paper() + theme(legend.position = "top", legend.title = element_text(size = 5.5), legend.text = element_text(size = 5),
+    scale_size(trans = "log10", range = c(0.8, 6), breaks = c(10, 100, 1000), labels = c("10", "100", "1,000"), name = "Judged ISM TSSs") +
+    scale_y_continuous(limits = c(-22, 100), breaks = seq(0, 100, 25)) +
+    labs(x = NULL, y = "% of judged ISM TSSs\nsupported (higher is better)", tag = "c") +
+    theme_paper() + theme(axis.text.x = element_text(angle = 45, hjust = 1),
+                          legend.position = "top", legend.title = element_text(size = 5.5), legend.text = element_text(size = 5),
                           legend.key.size = unit(2.5, "mm"), legend.margin = margin(0, 0, 0, 0))
 
 # ---- (d-g) examples

@@ -5,7 +5,7 @@
 # (a) aligned read length by cluster (genome-wide read sample);
 # (b) 5' completeness K(d) by cell-type class: the share of a gene's polyA-anchored reads
 #     extending at least d nt from the 3' end, averaged over single-TSS genes;
-# (c) control genes: share of reads starting at the observed TSS vs ending at the observed 3' end;
+# (c) control genes: share of polyA-anchored reads reaching the TSS (dominant sites, both datasets pooled);
 # (d) share of reads with an untemplated-G signature, for reads starting at the TSS vs inside the
 #     transcript body (single-TSS genes);
 # (e) the capped share of reads at each read 5' pile-up (TSS peak called from the reads alone), split by
@@ -85,7 +85,7 @@ p_a = ggplot(len_stats, aes(reorder(paste(dataset, cl), median), median, color =
     scale_y_continuous(limits = c(0, NA)) +
     labs(x = NULL, y = "Read length (nt)") +
     theme_paper() +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), panel.spacing.x = unit(6, "mm"))
 
 # ---- (b) 5' completeness curves by cell-type class
 genes = rbindlist(lapply(DS, function(ds) fread(file.path(COMPL, paste0(ds, ".genes.tsv")))[, dataset := ds]), fill = TRUE)
@@ -121,29 +121,35 @@ p_b = ggplot(K, aes(d, K, color = class)) +
     theme_paper() + FACET_GAP + theme(legend.key.height = unit(3, "mm")) +
     guides(color = guide_legend(ncol = 1, override.aes = list(linewidth = 0.8)))
 
-# ---- (c) control genes: reads reaching the TSS and the 3' end
-reads = rbindlist(lapply(DS, function(ds) fread(file.path(TRUNC, paste0(ds, ".reads.tsv.gz")))[, dataset := ds]))
+# ---- (c) control genes: polyA-anchored reads reaching the TSS (user, 2026-11-16). Per gene, one dominant TSS, PolyA
+# site and isoform, from both datasets' reads pooled (__TSS_Truncation_Check/control_gene_tss_reach.py); the reads
+# counted end at the PolyA site and follow the isoform's splicing from their 5' end on. Replaces the per-dataset
+# main annotated transcript, which put EEF1D (FTD) and OAZ1 on partial models starting inside the gene.
+reads = fread(file.path(TRUNC, "control_genes.reads.tsv.gz"))[, dataset := c(FTD = "ALS", PBMC = "PBMC")[dataset]]
 reads[, class := cls(dataset, cluster), by = dataset]
-mode10 = function(x) { x = x[!is.na(x)]; b = floor(x / 10) * 10; as.numeric(names(which.max(table(b)))) + 5 }
-reads[, `:=`(obs_tss = mode10(five_prime_tx_pos[five_prime_tx_pos <= first_exon_len[1] + 30]),
-             obs_end = mode10(three_prime_tx_pos)), by = .(dataset, gene)]
-reads[, `:=`(reach_tss = abs(five_prime_tx_pos - obs_tss) <= 50, reach_end = abs(three_prime_tx_pos - obs_end) <= 50)]
-reach = reads[, .(reads = .N, reach_TSS = mean(reach_tss, na.rm = TRUE), reach_end = mean(reach_end, na.rm = TRUE)),
-              by = .(dataset, gene, class)][reads >= 30]
+reach = reads[, .(reads = .N, reach_TSS = mean(reaches_tss)), by = .(dataset, gene, class)][reads >= 30]
 val(reach %>% transmute(dataset, group = paste(gene, class, sep = ":"), measure = "reach_TSS", value = reach_TSS))
+val(reach[class %in% neuron | dataset == "PBMC", .(lo = min(reach_TSS), hi = max(reach_TSS)), by = .(dataset, gene)] %>%
+        pivot_longer(c(lo, hi), names_to = "end", values_to = "value") %>%
+        transmute(dataset, group = paste(gene, if_else(dataset == "PBMC", "all classes", "neurons"), sep = ":"),
+                  measure = paste0("reach_TSS_", end), value))
+anch = fread(file.path(TRUNC, "control_genes.anchoring.tsv"))[, dataset := c(FTD = "ALS", PBMC = "PBMC")[dataset]]
+val(anch %>% transmute(dataset, group = gene, measure = "share_ending_at_polyA", value = share_ending_at_polyA))
 reach[, `:=`(dataset = factor(DS_LABEL[dataset], levels = DS_LABEL), class = factor(class, levels = class_order))]
 
-# one row per dataset (user, 2026-11-14: FTD and PBMC were hard to tell apart as shapes in one panel)
-p_c = ggplot(reach, aes(reach_TSS, reach_end, color = class)) +
-    geom_point(size = 1.2) +
-    facet_grid(dataset ~ gene, switch = "y") +
+# only the share of reads reaching the TSS is drawn; one column per gene, FTD and PBMC side by side; neurons as triangles
+reach[, neuron := class %in% neuron]
+p_c = ggplot(reach, aes(dataset, reach_TSS, color = class, shape = neuron)) +
+    geom_vline(xintercept = 1.5, linetype = "dashed", linewidth = PAPER$line, color = "grey50") +   # FTD | PBMC groups
+    geom_point(size = 1.4, position = position_jitter(width = 0.15, height = 0, seed = 1)) +
+    facet_grid(~ gene) +
     scale_color_manual(values = class_colors, drop = TRUE, guide = "none") +
-    scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1), labels = c("0", "0.5", "1")) +
-    scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1), labels = c("0", "0.5", "1")) +
-    labs(x = "Share of reads starting at the observed TSS", y = "Share ending at\nthe observed 3' end") +
-    theme_paper() + FACET_GAP +
-    theme(strip.placement = "outside", panel.spacing.y = unit(2, "mm"),
-          strip.text.y.left = element_text(angle = 0, face = "bold"))
+    scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 17), labels = c(`FALSE` = "other cell types", `TRUE` = "neurons"),
+                       name = NULL) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1), breaks = c(0, 0.25, 0.5, 0.75, 1)) +
+    labs(x = NULL, y = "PolyA-anchored reads\nreaching the TSS") +
+    theme_paper() + FACET_BOX +
+    theme(legend.position = "right", legend.key.height = unit(3, "mm"), panel.spacing.x = unit(5, "mm"))
 
 # ---- (d) untemplated-G signature: reads starting at the TSS vs inside the transcript body
 cap = rbindlist(lapply(DS, function(ds) fread(file.path(COMPL, paste0(ds, ".capsig.tsv.gz")))[, dataset := ds]))
@@ -186,7 +192,8 @@ p_e = ggplot(pk, aes(capped_frac, after_stat(density), fill = group)) +
 
 # each panel keeps its own legend (collected legends sat far from (d) and (e)); a left margin so no
 # y-axis title is cut at the page edge
-fig = (p_a / p_b / p_c / (p_d | p_e) +
+# a spacer column between (d) and (e), so (e)'s axis title stands clear of (d)
+fig = (p_a / p_b / p_c / ((p_d | plot_spacer() | p_e) + plot_layout(widths = c(1, 0.08, 1))) +
        plot_layout(heights = c(0.9, 1, 1.1, 1.25))) +
     plot_annotation(tag_levels = "a") &
     theme(plot.tag = element_text(size = 11, face = "bold", family = PAPER$font),

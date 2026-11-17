@@ -87,7 +87,7 @@ p_b = ggplot(by_support, aes(support_bin, frac, color = dataset, linetype = set,
     theme_paper()
 
 # ---- (c) signed offset from the atlas representative point: share of the sites within 100 nt
-# per 5-nt bin (square-root scale, so the shoulders beside the 0-nt peak show)
+# per 5-nt bin
 offsets = dist %>%
     filter(data == "observed", abs(dist_point) <= 100) %>%
     mutate(bin = round(dist_point / 5) * 5) %>%
@@ -101,14 +101,15 @@ p_c = ggplot(offsets, aes(bin, share, color = set)) +
     geom_vline(xintercept = 0, linetype = "dashed", linewidth = PAPER$line, color = "grey50") +
     facet_grid(dataset ~ site_type) +
     scale_color_manual(values = c(pseudobulk = "#8c8b86", `cluster-guided` = "#1baf7a"), name = NULL) +
-    scale_y_sqrt(labels = scales::percent, breaks = c(0.01, 0.1, 0.25, 0.5, 0.75)) +
-    labs(x = "LRAA site - atlas representative point (nt; <0 upstream)", y = "Sites within 100 nt (sqrt scale)") +
+    scale_y_continuous(labels = scales::percent, limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
+    labs(x = "LRAA site - atlas representative point (nt; <0 upstream)", y = "Sites within 100 nt") +
     theme_paper() +
     theme(strip.text.y = element_text(angle = 0))
 
 fig = (p_a / p_b / p_c) + plot_layout(heights = c(1, 1, 1.4)) +
     plot_annotation(tag_levels = "a") &
-    theme(plot.tag = element_text(size = 11, face = "bold", family = PAPER$font))
+    theme(plot.tag = element_text(size = 11, face = "bold", family = PAPER$font),
+          panel.spacing.x = unit(1.5, "lines"))   # gap between the TSS and PolyA columns
 
 ggsave("SuppFig_site_atlas.pdf", fig, width = WIDTH_IN, height = HEIGHT_IN, device = grDevices::pdf, useDingbats = FALSE)
 embed_fonts("SuppFig_site_atlas.pdf")
