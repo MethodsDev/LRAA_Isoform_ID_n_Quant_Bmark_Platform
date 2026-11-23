@@ -46,7 +46,7 @@ QUANT_ONLY/                           quantification-only regime
 DENOVO_ID/                            de novo isoform ID regime
 REF_Guided/                           reference-guided isoform ID regime
 supp_analyses/                        supplementary analyses (5' completeness, ISM internal TSS, proteoforms,
-                                      site atlas, SQLIKE categories, DEXSeq null split)
+                                      site atlas, SQLIKE categories)
 supp_tables/                          builders of the Supplementary Tables
 data_generation/                      notebooks that generated the SIRV, MORF and cell-line data
 LRAA_paper-PBMCs_study/               submodule: PBMC single-cell study
